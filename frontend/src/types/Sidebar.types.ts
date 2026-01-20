@@ -3,6 +3,9 @@ import type { Document } from "~/lib/api";
 export interface SidebarProps {
   documents: Document[];
   currentPath: string | null;
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  saveStatus: "saved" | "saving" | "unsaved";
   onSelectDocument: (path: string) => void;
   onCreateDocument: (name: string, folderPath?: string) => void;
   onCreateFolder: (name: string, parentPath?: string) => void;

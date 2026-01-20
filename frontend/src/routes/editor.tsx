@@ -1,7 +1,11 @@
-import { createSignal, createEffect, Show, For } from "solid-js";
+import { createSignal, createEffect, Show, lazy, Suspense } from "solid-js";
 import { api, type Document } from "~/lib/api";
 import Editor from "~/components/Editor";
 import Sidebar from "~/components/Sidebar";
+import Logo from "~/components/Logo";
+
+// Lazy load markdown editor with live preview to avoid SSR issues
+const MarkdownEditor = lazy(() => import("~/components/MarkdownEditor"));
 
 export default function EditorPage() {
   const [allDocuments, setAllDocuments] = createSignal<Document[]>([]);
@@ -9,6 +13,7 @@ export default function EditorPage() {
   const [currentContent, setCurrentContent] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
+  const [useLivePreview, setUseLivePreview] = createSignal(true);
   const [saveStatus, setSaveStatus] = createSignal<
     "saved" | "saving" | "unsaved"
   >("saved");
@@ -155,34 +160,24 @@ export default function EditorPage() {
     <div class="h-screen flex flex-col bg-neutral-900">
       {/* Header */}
       <header class="h-14 border-b border-neutral-800 flex items-center justify-between px-4 bg-neutral-950">
-        <div class="flex items-center gap-4">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen())}
-            class="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
-            aria-label="Toggle sidebar"
-          >
-            <div class="i-carbon-menu w-5 h-5 text-neutral-400" />
-          </button>
-          <h1 class="text-lg font-semibold text-neutral-100">Pluma</h1>
-          <Show when={currentPath()}>
-            <span class=" text-neutral-500">{currentPath()}</span>
+        <div class="flex items-center gap-2">
+          <Show when={!sidebarOpen()}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              class="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+              aria-label="Open sidebar"
+            >
+              <div class="i-carbon-side-panel-open w-5 h-5 text-neutral-400" />
+            </button>
           </Show>
+          <Logo color="white" />
+          <h1 class="text-lg font-semibold text-neutral-100">pluma</h1>
         </div>
 
         <div class="flex items-center gap-4">
-          <Show when={saveStatus() === "saving"}>
-            <span class=" text-neutral-400">Saving...</span>
-          </Show>
-          <Show when={saveStatus() === "saved"}>
-            <span class=" text-green-500">✓ Saved</span>
-          </Show>
-          <Show when={saveStatus() === "unsaved"}>
-            <span class=" text-yellow-500">● Unsaved</span>
-          </Show>
-
           <button
             onClick={handleLogout}
-            class="px-3 py-1.5  text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors"
+            class="px-3 py-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors"
           >
             Logout
           </button>
@@ -195,6 +190,9 @@ export default function EditorPage() {
           <Sidebar
             documents={allDocuments()}
             currentPath={currentPath()}
+            sidebarOpen={sidebarOpen()}
+            setSidebarOpen={setSidebarOpen}
+            saveStatus={saveStatus()}
             onSelectDocument={loadDocument}
             onCreateDocument={createNewDocument}
             onCreateFolder={createNewFolder}
@@ -204,7 +202,39 @@ export default function EditorPage() {
         </Show>
 
         {/* Main Editor Area */}
-        <div class="flex-1 flex overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden">
+          {/* View Mode Toggle */}
+          <Show when={currentPath()}>
+            <div class="h-12 border-b border-neutral-800 flex items-center px-4 bg-neutral-950">
+              <div class="flex items-center gap-1 border border-neutral-800 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setUseLivePreview(false)}
+                  class={`flex items-center px-3 py-1.5 text-sm transition-colors ${
+                    !useLivePreview()
+                      ? "bg-neutral-700 text-neutral-100"
+                      : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                  }`}
+                  title="Plain text editor"
+                >
+                  <div class="i-carbon-code w-4 h-4 inline-block mr-1" />
+                  Plain
+                </button>
+                <button
+                  onClick={() => setUseLivePreview(true)}
+                  class={`flex items-center px-3 py-1.5 text-sm transition-colors ${
+                    useLivePreview()
+                      ? "bg-neutral-700 text-neutral-100"
+                      : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
+                  }`}
+                  title="Live preview editor"
+                >
+                  <div class="i-carbon-view w-4 h-4 inline-block mr-1" />
+                  Live
+                </button>
+              </div>
+            </div>
+          </Show>
+
           <Show
             when={currentPath()}
             fallback={
@@ -225,10 +255,28 @@ export default function EditorPage() {
                 </div>
               }
             >
-              <Editor
-                content={currentContent()}
-                onChange={handleContentChange}
-              />
+              <Show
+                when={useLivePreview()}
+                fallback={
+                  <Editor
+                    content={currentContent()}
+                    onChange={handleContentChange}
+                  />
+                }
+              >
+                <Suspense
+                  fallback={
+                    <div class="flex-1 flex items-center justify-center">
+                      <div class="i-carbon-circle-dash animate-spin w-8 h-8 text-neutral-500" />
+                    </div>
+                  }
+                >
+                  <MarkdownEditor
+                    content={currentContent()}
+                    onChange={handleContentChange}
+                  />
+                </Suspense>
+              </Show>
             </Show>
           </Show>
         </div>

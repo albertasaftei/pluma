@@ -189,13 +189,14 @@ export default function Sidebar(props: SidebarProps) {
               <Popover
                 trigger={
                   <button
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setOpenMenuPath(
                         openMenuPath() === nodeProps.node.path
                           ? null
                           : nodeProps.node.path,
-                      )
-                    }
+                      );
+                    }}
                     class="p-1 hover:bg-neutral-800 rounded transition-colors"
                     title="More options"
                   >
@@ -209,7 +210,7 @@ export default function Sidebar(props: SidebarProps) {
                   icon="i-carbon-edit"
                   label="Rename"
                   onClick={() => {
-                    const fileName = nodeProps.node.name;
+                    const fileName = nodeProps.node.name.split(".")[0];
                     setItemToRename(nodeProps.node.path);
                     setNewItemName(fileName);
                     setShowRenameModal(true);
@@ -253,6 +254,35 @@ export default function Sidebar(props: SidebarProps) {
       <aside class="w-64 border-r border-neutral-800 bg-neutral-950 flex flex-col">
         {/* Sidebar Header */}
         <div class="p-4 border-b border-neutral-800">
+          <div class="flex items-center justify-between mb-3">
+            <button
+              onClick={() => props.setSidebarOpen(false)}
+              class="p-1.5 hover:bg-neutral-800 rounded-lg transition-colors"
+              title="Close sidebar"
+            >
+              <div class="i-carbon-side-panel-close w-5 h-5 text-neutral-400" />
+            </button>
+            <Show when={props.saveStatus === "saving"}>
+              <span class="text-xs text-neutral-400">Saving...</span>
+            </Show>
+            <Show when={props.saveStatus === "saved"}>
+              <span class="text-xs text-green-500">✓ Saved</span>
+            </Show>
+            <Show when={props.saveStatus === "unsaved"}>
+              <span class="text-xs text-yellow-500">● Unsaved</span>
+            </Show>
+          </div>
+
+          {/* Current File Breadcrumb */}
+          <Show when={props.currentPath}>
+            <div class="mb-3 px-2 py-1.5 bg-neutral-900 rounded-lg border border-neutral-800">
+              <div class="text-xs text-neutral-500 mb-0.5">Current file</div>
+              <div class="text-sm text-neutral-200 truncate">
+                {props.currentPath}
+              </div>
+            </div>
+          </Show>
+
           <div class="flex gap-2 mb-3">
             <button
               onClick={() => {
