@@ -2,6 +2,19 @@ import type { Document } from "~/lib/api";
 import type { TreeNode } from "~/types/Sidebar.types";
 
 /**
+ * Preset color palette for files and folders
+ */
+export const COLOR_PALETTE = [
+  { name: "Red", value: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" },
+  { name: "Orange", value: "#f97316", bg: "rgba(249, 115, 22, 0.15)" },
+  { name: "Yellow", value: "#eab308", bg: "rgba(234, 179, 8, 0.15)" },
+  { name: "Green", value: "#22c55e", bg: "rgba(34, 197, 94, 0.15)" },
+  { name: "Blue", value: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
+  { name: "Purple", value: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
+  { name: "Pink", value: "#ec4899", bg: "rgba(236, 72, 153, 0.15)" },
+];
+
+/**
  * Builds a tree structure from a flat array of documents
  */
 export function buildDocumentTree(documents: Document[]): TreeNode[] {

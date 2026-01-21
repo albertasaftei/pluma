@@ -170,6 +170,15 @@ export default function EditorPage() {
     }
   };
 
+  const setItemColor = async (path: string, color: string | null) => {
+    try {
+      await api.setItemColor(path, color);
+      await loadAllDocuments();
+    } catch (error) {
+      console.error("Failed to set item color:", error);
+    }
+  };
+
   const handleLogout = () => {
     api.clearToken();
     window.location.href = "/";
@@ -219,6 +228,7 @@ export default function EditorPage() {
             onDeleteItem={deleteItem}
             onRenameItem={renameItem}
             onExpandFolder={toggleExpandFolder}
+            onSetColor={setItemColor}
           />
         </Show>
 

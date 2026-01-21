@@ -75,19 +75,32 @@ documentsRouter.get("/list", async (c) => {
     const items = await fs.readdir(fullPath, { withFileTypes: true });
 
     const result = await Promise.all(
-      items.map(async (item) => {
-        const itemPath = path.join(fullPath, item.name);
-        const stats = await fs.stat(itemPath);
-        const relativePath = path.relative(DOCUMENTS_PATH, itemPath);
+      items
+        .filter((item) => !item.name.endsWith(".meta.json")) // Filter out metadata files
+        .map(async (item) => {
+          const itemPath = path.join(fullPath, item.name);
+          const stats = await fs.stat(itemPath);
+          const relativePath = path.relative(DOCUMENTS_PATH, itemPath);
+          const metadataPath = itemPath + ".meta.json";
 
-        return {
-          name: item.name,
-          path: "/" + relativePath.replace(/\\/g, "/"),
-          type: item.isDirectory() ? "folder" : "file",
-          modified: stats.mtime,
-          size: stats.size,
-        };
-      }),
+          // Try to load metadata
+          let metadata: any = {};
+          try {
+            const metaContent = await fs.readFile(metadataPath, "utf-8");
+            metadata = JSON.parse(metaContent);
+          } catch {
+            // No metadata file, that's fine
+          }
+
+          return {
+            name: item.name,
+            path: "/" + relativePath.replace(/\\/g, "/"),
+            type: item.isDirectory() ? "folder" : "file",
+            modified: stats.mtime,
+            size: stats.size,
+            color: metadata.color || undefined,
+          };
+        }),
     );
 
     return c.json({ items: result });
@@ -215,6 +228,47 @@ documentsRouter.post("/rename", async (c) => {
   } catch (error) {
     console.error("Error renaming:", error);
     return c.json({ error: "Failed to rename" }, 500);
+  }
+});
+
+// Set item color metadata
+documentsRouter.post("/color", async (c) => {
+  const { path: itemPath, color } = await c.req.json();
+
+  if (!itemPath) {
+    return c.json({ error: "Path is required" }, 400);
+  }
+
+  const fullPath = sanitizePath(itemPath);
+  const metadataPath = fullPath + ".meta.json";
+
+  try {
+    // Verify the file/folder exists
+    await fs.access(fullPath);
+
+    // Read or create metadata
+    let metadata: any = {};
+    try {
+      const metaContent = await fs.readFile(metadataPath, "utf-8");
+      metadata = JSON.parse(metaContent);
+    } catch {
+      // Metadata file doesn't exist yet, that's fine
+    }
+
+    // Update color
+    if (color) {
+      metadata.color = color;
+    } else {
+      delete metadata.color;
+    }
+
+    // Save metadata
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    return c.json({ message: "Color updated successfully" });
+  } catch (error) {
+    console.error("Error setting color:", error);
+    return c.json({ error: "Failed to set color" }, 500);
   }
 });
 

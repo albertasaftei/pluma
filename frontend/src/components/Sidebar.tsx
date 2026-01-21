@@ -1,8 +1,10 @@
 import { createSignal, For, Show, createMemo, createEffect } from "solid-js";
 import Popover, { PopoverItem } from "./Popover";
+import ColorPicker from "./ColorPicker";
 import type { SidebarProps, TreeNode } from "~/types/Sidebar.types";
 import {
   buildDocumentTree,
+  COLOR_PALETTE,
   filterTreeNodes,
   formatDate,
 } from "~/utils/sidebar.utils";
@@ -88,16 +90,30 @@ export default function Sidebar(props: SidebarProps) {
   const TreeNode = (nodeProps: { node: TreeNode }) => {
     const isExpanded = () => props.expandedFolders.has(nodeProps.node.path);
     const paddingLeft = () => `${nodeProps.node.depth * 16 + 16}px`;
+    const getBackgroundColor = () => {
+      if (nodeProps.node.path === props.currentPath) {
+        return nodeProps.node.color
+          ? COLOR_PALETTE.find((c) => c.value === nodeProps.node.color)?.bg ||
+              "#171717"
+          : "#171717";
+      }
+      return nodeProps.node.color
+        ? COLOR_PALETTE.find((c) => c.value === nodeProps.node.color)?.bg
+        : undefined;
+    };
 
     return (
       <>
         <div
           class={`group relative hover:bg-neutral-900 border-l-2 transition-colors ${
             nodeProps.node.path === props.currentPath
-              ? "border-l-blue-500 bg-neutral-900"
+              ? "border-l-blue-500"
               : "border-l-transparent"
           }`}
-          style={{ "padding-left": paddingLeft() }}
+          style={{
+            "padding-left": paddingLeft(),
+            "background-color": getBackgroundColor(),
+          }}
         >
           <div
             onClick={() => {
@@ -192,6 +208,7 @@ export default function Sidebar(props: SidebarProps) {
                     setOpenMenuPath(null);
                   }}
                 />
+
                 <PopoverItem
                   icon="i-carbon-trash-can"
                   label="Delete"
@@ -201,6 +218,15 @@ export default function Sidebar(props: SidebarProps) {
                     setOpenMenuPath(null);
                   }}
                 />
+                <Show when={props.onSetColor}>
+                  <ColorPicker
+                    currentColor={nodeProps.node.color}
+                    onColorSelect={(color) => {
+                      props.onSetColor?.(nodeProps.node.path, color);
+                      setOpenMenuPath(null);
+                    }}
+                  />
+                </Show>
               </Popover>
             </div>
           </div>

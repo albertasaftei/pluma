@@ -7,6 +7,7 @@ export interface Document {
   type: "file" | "folder";
   modified: string;
   size: number;
+  color?: string;
 }
 
 export class ApiClient {
@@ -125,6 +126,13 @@ export class ApiClient {
     return this.request("/api/documents/rename", {
       method: "POST",
       body: JSON.stringify({ oldPath, newPath }),
+    });
+  }
+
+  async setItemColor(path: string, color: string | null) {
+    return this.request("/api/documents/color", {
+      method: "POST",
+      body: JSON.stringify({ path, color }),
     });
   }
 }

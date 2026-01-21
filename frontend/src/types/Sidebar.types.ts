@@ -13,6 +13,7 @@ export interface SidebarProps {
   onDeleteItem: (path: string) => void;
   onRenameItem?: (oldPath: string, newName: string) => void;
   onExpandFolder: (path: string) => void;
+  onSetColor?: (path: string, color: string | null) => void;
 }
 
 export interface TreeNode extends Document {
