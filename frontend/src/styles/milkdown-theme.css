@@ -147,11 +147,21 @@
 .milkdown ol {
   color: #e5e5e5 !important;
   padding-left: 2rem !important;
+  margin: 1rem 0 !important;
+}
+
+.milkdown ul {
+  list-style-type: disc !important;
+}
+
+.milkdown ol {
+  list-style-type: decimal !important;
 }
 
 .milkdown li {
   color: #e5e5e5 !important;
   margin: 0.5rem 0 !important;
+  display: list-item !important;
 }
 
 .milkdown li::marker {
