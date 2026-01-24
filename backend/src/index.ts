@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import fs from "fs";
 import path from "path";
 import "./config.js"; // Load configuration first
+import "./db/index.js"; // Initialize database
 import { documentsRouter } from "./routes/documents.js";
 import { authRouter } from "./routes/auth.js";
 
@@ -26,7 +27,7 @@ app.use(
           `http://127.0.0.1:${frontendPort}`,
           `http://frontend:${frontendPort}`, // Docker internal network
         ].filter(Boolean);
-        
+
         // Allow if origin matches or if no origin (same-origin requests)
         if (!origin || allowedOrigins.includes(origin)) {
           return origin || "*";

@@ -7,6 +7,7 @@ export default function Home() {
   const [needsSetup, setNeedsSetup] = createSignal(false);
   const [isSetup, setIsSetup] = createSignal(false);
   const [username, setUsername] = createSignal("");
+  const [email, setEmail] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [confirmPassword, setConfirmPassword] = createSignal("");
   const [error, setError] = createSignal("");
@@ -47,9 +48,10 @@ export default function Home() {
     }
 
     try {
-      await api.setup(username(), password());
+      await api.setup(username(), email(), password());
       setNeedsSetup(false);
       setIsSetup(false);
+      setEmail("");
       setPassword("");
       setConfirmPassword("");
     } catch (err: any) {
@@ -121,6 +123,22 @@ export default function Home() {
                   placeholder="Enter username"
                 />
               </div>
+
+              <Show when={isSetup()}>
+                <div class="mb-4">
+                  <label class="block  font-medium text-neutral-300 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email()}
+                    onInput={(e) => setEmail(e.currentTarget.value)}
+                    required
+                    class="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-neutral-700"
+                    placeholder="Enter email"
+                  />
+                </div>
+              </Show>
 
               <div class="mb-4">
                 <label class="block  font-medium text-neutral-300 mb-2">

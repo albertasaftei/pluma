@@ -4,6 +4,7 @@ import path from "path";
 import { verifyToken } from "./auth.js";
 import crypto from "crypto";
 import { ENCRYPTION_KEY } from "../config.js";
+import { documentQueries } from "../db/index.js";
 
 type Variables = {
   user: any;
@@ -145,12 +146,29 @@ documentsRouter.post("/save", async (c) => {
   const fullPath = sanitizePath(filePath);
 
   try {
+    const user = c.get("user");
+    const userId = user.userId;
+
     // Ensure directory exists
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
     // Encrypt content
     const encrypted = encrypt(content);
     await fs.writeFile(fullPath, encrypted, "utf-8");
+
+    // Get file stats
+    const stats = await fs.stat(fullPath);
+
+    // Extract title from content (first line without #)
+    const title =
+      content
+        .split("\n")[0]
+        .replace(/^#+\s*/, "")
+        .trim() || path.basename(filePath, ".md");
+
+    // Update document metadata and FTS index
+    documentQueries.upsert.run(userId, filePath, title, null, stats.size);
+    documentQueries.updateContent.run(content, userId, filePath);
 
     return c.json({ message: "Document saved successfully", path: filePath });
   } catch (error) {
@@ -248,6 +266,9 @@ documentsRouter.post("/color", async (c) => {
   const metadataPath = fullPath + ".meta.json";
 
   try {
+    const user = c.get("user");
+    const userId = user.userId;
+
     // Verify the file/folder exists
     await fs.access(fullPath);
 
@@ -269,6 +290,9 @@ documentsRouter.post("/color", async (c) => {
 
     // Save metadata
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    // Update color in database
+    documentQueries.updateColor.run(color, userId, itemPath);
 
     return c.json({ message: "Color updated successfully" });
   } catch (error) {
@@ -345,6 +369,37 @@ documentsRouter.post("/import", async (c) => {
   } catch (error) {
     console.error("Error importing documents:", error);
     return c.json({ error: "Failed to import documents" }, 500);
+  }
+});
+
+// Search documents
+documentsRouter.get("/search", async (c) => {
+  const query = c.req.query("q");
+
+  if (!query || query.trim().length === 0) {
+    return c.json({ results: [] });
+  }
+
+  try {
+    const user = c.get("user");
+    const userId = user.userId;
+
+    // Search using SQLite FTS5
+    const results = documentQueries.search.all(userId, query) as any[];
+
+    // Return results with relevant info
+    const searchResults = results.map((doc) => ({
+      path: doc.path,
+      title: doc.title,
+      color: doc.color,
+      modified: doc.updated_at,
+      size: doc.size,
+    }));
+
+    return c.json({ results: searchResults });
+  } catch (error) {
+    console.error("Error searching documents:", error);
+    return c.json({ error: "Search failed" }, 500);
   }
 });
 

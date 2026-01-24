@@ -1,6 +1,6 @@
 # Pluma
 
-A self-hosted markdown editor with live preview, document encryption, and dark/light theme support.
+A self-hosted markdown editor with live preview, document encryption, dark theme, and multi-user support.
 
 ## Quick Start
 
@@ -27,12 +27,12 @@ A self-hosted markdown editor with live preview, document encryption, and dark/l
 
    This will:
    - Generate secure secrets for JWT and encryption
-   - Build Docker containers
+   - Build the Docker container (frontend + backend in one)
    - Start the application
 
-3. Access the application:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
+3. Access the application at **http://localhost:3000**
+
+4. Create your admin account on first visit
 
 ### Manual Setup
 
@@ -45,7 +45,7 @@ If you prefer to set up manually:
    ./setup-secrets.sh
    ```
 
-2. Build and start containers:
+2. Build and start the container:
 
    ```bash
    docker-compose up -d --build
@@ -53,7 +53,7 @@ If you prefer to set up manually:
 
 3. View logs:
    ```bash
-   docker-compose logs -f
+   docker logs pluma -f
    ```
 
 ## Configuration
@@ -81,15 +81,25 @@ PORT=3001
 
 ## Backup and Restore
 
-### Backup Your Data
+### Automated Backups (Optional)
 
-Create a backup of your documents:
+Enable automated daily backups by starting with the `backup` profile:
+
+```bash
+docker-compose --profile backup up -d
+```
+
+See [BACKUP.md](BACKUP.md) for detailed backup/restore procedures.
+
+### Manual Backup
+
+Create a one-time backup of all data (documents + database):
 
 ```bash
 docker run --rm \
   -v pluma_pluma-data:/data \
   -v $(pwd)/backups:/backup \
-  alpine tar czf /backup/pluma-backup-$(date +%Y%m%d-%H%M%S).tar.gz /data
+  alpine tar czf /backup/pluma-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
 ```
 
 ### Restore from Backup
@@ -98,33 +108,39 @@ docker run --rm \
 docker run --rm \
   -v pluma_pluma-data:/data \
   -v $(pwd)/backups:/backup \
-  alpine sh -c "cd /data && tar xzf /backup/pluma-backup-YYYYMMDD-HHMMSS.tar.gz --strip 1"
+  alpine sh -c "rm -rf /data/* && tar xzf /backup/pluma-backup-YYYYMMDD-HHMMSS.tar.gz -C /data"
 ```
 
-**Don't forget to also backup your `secrets/` directory!**
+**⚠️ Important:** Also backup your `secrets/` directory separately! Without these secrets, you cannot decrypt your documents.
 
 ## Development
 
 ### Local Development
 
-1. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-2. Set up environment variables in `.env`
-
-3. Start backend:
+1. Backend:
 
    ```bash
    cd backend
+   npm install
+   npm run dev
+   ```
+
+2. Frontend (in another terminal):
+
+   ```bash
+   cd frontend
+   pnpm install
    pnpm dev
    ```
 
-4. Start frontend (in another terminal):
-   ```bash
-   pnpm dev
+3. Set up environment variables in `backend/.env`:
+
+   ```env
+   JWT_SECRET=dev-jwt-secret-key
+   ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+   PORT=3001
+   DB_PATH=./data/pluma.db
+   DOCUMENTS_PATH=./data/documents
    ```
 
 ### Lost Encryption Key
