@@ -9,14 +9,13 @@ import {
 import { api, type Document } from "~/lib/api";
 import Editor from "~/components/Editor";
 import Sidebar from "~/components/Sidebar";
-import Logo from "~/components/Logo";
-import Button from "~/components/Button";
+import Header from "~/components/Header";
 import { SettingsMenu } from "~/components/SettingsMenu";
 import AlertDialog from "~/components/AlertDialog";
 import Dashboard from "~/components/Dashboard";
 import AdminPanel from "~/components/AdminPanel";
-import OrganizationSelector from "~/components/OrganizationSelector";
 import OrganizationPanel from "~/components/OrganizationPanel";
+import Button from "~/components/Button";
 
 // Lazy load markdown editor with live preview to avoid SSR issues
 const MarkdownEditor = lazy(() => import("~/components/MarkdownEditor"));
@@ -40,17 +39,8 @@ export default function EditorPage() {
   }>({ isOpen: false, path: null });
   const [showAdminPanel, setShowAdminPanel] = createSignal(false);
   const [showOrgPanel, setShowOrgPanel] = createSignal(false);
-  const [isAdmin, setIsAdmin] = createSignal(false);
-  const [isOrgAdmin, setIsOrgAdmin] = createSignal(false);
-  const [mounted, setMounted] = createSignal(false);
 
   let saveTimeout: NodeJS.Timeout;
-
-  onMount(() => {
-    setMounted(true);
-    setIsAdmin(api.isAdmin());
-    setIsOrgAdmin(api.isOrgAdmin());
-  });
 
   // Load all documents recursively
   const loadAllDocuments = async () => {
@@ -77,9 +67,7 @@ export default function EditorPage() {
   };
 
   createEffect(() => {
-    if (mounted()) {
-      loadAllDocuments();
-    }
+    loadAllDocuments();
   });
 
   const loadDocument = async (path: string) => {
@@ -217,11 +205,6 @@ export default function EditorPage() {
     }
   };
 
-  const handleLogout = () => {
-    api.clearToken();
-    window.location.href = "/";
-  };
-
   return (
     <div class="h-screen flex flex-col bg-neutral-900">
       {/* Admin Panel */}
@@ -249,75 +232,17 @@ export default function EditorPage() {
       />
 
       {/* Header */}
-      <header class="h-14 border-b border-neutral-800 flex items-center justify-between px-2 sm:px-4 bg-neutral-950">
-        <div class="flex items-center gap-1 sm:gap-2">
-          <Show when={!sidebarOpen()}>
-            <Button
-              onClick={() => setSidebarOpen(true)}
-              variant="icon"
-              size="lg"
-              aria-label="Open sidebar"
-            >
-              <div class="i-carbon-side-panel-open w-5 h-5" />
-            </Button>
-          </Show>
-          <Button
-            onClick={() => {
-              setCurrentPath(null);
-              setCurrentContent("");
-            }}
-            variant="ghost"
-            size="lg"
-            class="flex items-center gap-1 sm:gap-2"
-            title="Go to Dashboard"
-          >
-            <Logo color="#2a9d8f" />
-            <h1 class="hidden sm:block text-lg font-semibold text-neutral-100">
-              pluma
-            </h1>
-          </Button>
-        </div>
-
-        <div class="flex items-center gap-2 sm:gap-3">
-          {/* Organization Selector */}
-          <Show when={mounted()}>
-            <OrganizationSelector onSwitch={() => loadAllDocuments()} />
-          </Show>
-
-          {/* Organization Settings (for org admins) */}
-          <Show when={mounted() && isOrgAdmin()}>
-            <Button
-              onClick={() => setShowOrgPanel(true)}
-              variant="icon"
-              size="md"
-              title="Organization Settings"
-            >
-              <div class="i-carbon-settings w-5 h-5" />
-            </Button>
-          </Show>
-
-          {/* Global Admin Panel (for global admin only) */}
-          <Show when={mounted() && isAdmin()}>
-            <Button
-              onClick={() => setShowAdminPanel(true)}
-              variant="icon"
-              size="md"
-              title="Admin Panel"
-            >
-              <div class="i-carbon-user-admin w-5 h-5" />
-            </Button>
-          </Show>
-
-          <Button
-            onClick={handleLogout}
-            variant="icon"
-            size="md"
-            title="Logout"
-          >
-            <div class="i-carbon-logout w-5 h-5" />
-          </Button>
-        </div>
-      </header>
+      <Header
+        sidebarOpen={sidebarOpen()}
+        onToggleSidebar={() => setSidebarOpen(true)}
+        onDashboard={() => {
+          setCurrentPath(null);
+          setCurrentContent("");
+        }}
+        onOpenOrgPanel={() => setShowOrgPanel(true)}
+        onOpenAdminPanel={() => setShowAdminPanel(true)}
+        onOrgSwitch={() => loadAllDocuments()}
+      />
 
       <div class="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
