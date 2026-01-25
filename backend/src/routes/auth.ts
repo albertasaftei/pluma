@@ -2,7 +2,12 @@ import { Hono } from "hono";
 import { SignJWT } from "jose";
 import bcrypt from "bcrypt";
 import { JWT_SECRET } from "../config.js";
-import { userQueries, sessionQueries } from "../db/index.js";
+import {
+  userQueries,
+  sessionQueries,
+  organizationQueries,
+  memberQueries,
+} from "../db/index.js";
 import crypto from "crypto";
 
 const authRouter = new Hono();
@@ -30,7 +35,22 @@ authRouter.post("/setup", async (c) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     try {
-      userQueries.create.run(username, email, passwordHash);
+      // Create user
+      const result = userQueries.create.run(username, email, passwordHash);
+      const userId = result.lastInsertRowid as number;
+
+      // Create personal organization
+      const orgSlug = `${username}-personal`;
+      const orgResult = organizationQueries.create.run(
+        `${username}'s Organization`,
+        orgSlug,
+        userId,
+      );
+      const orgId = orgResult.lastInsertRowid as number;
+
+      // Add user as admin of their organization
+      memberQueries.add.run(orgId, userId, "admin");
+
       return c.json({ message: "Setup completed successfully" });
     } catch (error: any) {
       if (error.message.includes("UNIQUE")) {
@@ -55,13 +75,31 @@ authRouter.post("/login", async (c) => {
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    // Create session
+    // Get user's organizations
+    const organizations = organizationQueries.listByUser.all(user.id) as any[];
+
+    if (organizations.length === 0) {
+      return c.json({ error: "No organization found for user" }, 500);
+    }
+
+    // Use first organization as default (usually personal org)
+    const currentOrg = organizations[0];
+    const membership = memberQueries.findMembership.get(
+      currentOrg.id,
+      user.id,
+    ) as any;
+
+    // Check if user is global admin (first user)
+    const isGlobalAdmin = user.id === 1;
+
+    // Create session with organization context
     const sessionId = crypto.randomUUID();
-    const isAdmin = user.id === 1; // First user is admin
     const token = await new SignJWT({
       userId: user.id,
       username: user.username,
-      isAdmin,
+      isAdmin: isGlobalAdmin,
+      currentOrgId: currentOrg.id,
+      orgRole: membership?.role || "member",
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("7d")
@@ -74,10 +112,21 @@ authRouter.post("/login", async (c) => {
       sessionId,
       user.id,
       token,
+      currentOrg.id,
       expiresAt.toISOString(),
     );
 
-    return c.json({ token, username: user.username, isAdmin });
+    return c.json({
+      token,
+      username: user.username,
+      isAdmin: isGlobalAdmin,
+      currentOrganization: {
+        id: currentOrg.id,
+        name: currentOrg.name,
+        slug: currentOrg.slug,
+        role: membership?.role || "member",
+      },
+    });
   } catch (error) {
     console.error("Login error:", error);
     return c.json({ error: "Login failed" }, 500);

@@ -1,4 +1,11 @@
-import { createSignal, createEffect, Show, lazy, Suspense } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  Show,
+  lazy,
+  Suspense,
+  onMount,
+} from "solid-js";
 import { api, type Document } from "~/lib/api";
 import Editor from "~/components/Editor";
 import Sidebar from "~/components/Sidebar";
@@ -8,6 +15,8 @@ import { SettingsMenu } from "~/components/SettingsMenu";
 import AlertDialog from "~/components/AlertDialog";
 import Dashboard from "~/components/Dashboard";
 import AdminPanel from "~/components/AdminPanel";
+import OrganizationSelector from "~/components/OrganizationSelector";
+import OrganizationPanel from "~/components/OrganizationPanel";
 
 // Lazy load markdown editor with live preview to avoid SSR issues
 const MarkdownEditor = lazy(() => import("~/components/MarkdownEditor"));
@@ -30,9 +39,18 @@ export default function EditorPage() {
     path: string | null;
   }>({ isOpen: false, path: null });
   const [showAdminPanel, setShowAdminPanel] = createSignal(false);
+  const [showOrgPanel, setShowOrgPanel] = createSignal(false);
   const [isAdmin, setIsAdmin] = createSignal(false);
+  const [isOrgAdmin, setIsOrgAdmin] = createSignal(false);
+  const [mounted, setMounted] = createSignal(false);
 
   let saveTimeout: NodeJS.Timeout;
+
+  onMount(() => {
+    setMounted(true);
+    setIsAdmin(api.isAdmin());
+    setIsOrgAdmin(api.isOrgAdmin());
+  });
 
   // Load all documents recursively
   const loadAllDocuments = async () => {
@@ -59,8 +77,9 @@ export default function EditorPage() {
   };
 
   createEffect(() => {
-    loadAllDocuments();
-    setIsAdmin(api.isAdmin());
+    if (mounted()) {
+      loadAllDocuments();
+    }
   });
 
   const loadDocument = async (path: string) => {
@@ -211,6 +230,12 @@ export default function EditorPage() {
         onClose={() => setShowAdminPanel(false)}
       />
 
+      {/* Organization Panel */}
+      <OrganizationPanel
+        isOpen={showOrgPanel()}
+        onClose={() => setShowOrgPanel(false)}
+      />
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog
         isOpen={deleteDialog().isOpen}
@@ -253,8 +278,26 @@ export default function EditorPage() {
           </Button>
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-4">
-          <Show when={isAdmin()}>
+        <div class="flex items-center gap-2 sm:gap-3">
+          {/* Organization Selector */}
+          <Show when={mounted()}>
+            <OrganizationSelector onSwitch={() => loadAllDocuments()} />
+          </Show>
+
+          {/* Organization Settings (for org admins) */}
+          <Show when={mounted() && isOrgAdmin()}>
+            <Button
+              onClick={() => setShowOrgPanel(true)}
+              variant="icon"
+              size="md"
+              title="Organization Settings"
+            >
+              <div class="i-carbon-settings w-5 h-5" />
+            </Button>
+          </Show>
+
+          {/* Global Admin Panel (for global admin only) */}
+          <Show when={mounted() && isAdmin()}>
             <Button
               onClick={() => setShowAdminPanel(true)}
               variant="icon"
@@ -264,6 +307,7 @@ export default function EditorPage() {
               <div class="i-carbon-user-admin w-5 h-5" />
             </Button>
           </Show>
+
           <Button
             onClick={handleLogout}
             variant="icon"
@@ -291,7 +335,6 @@ export default function EditorPage() {
               setSidebarOpen={setSidebarOpen}
               saveStatus={saveStatus()}
               expandedFolders={expandedFolders()}
-              settingsMenu={<SettingsMenu />}
               onSelectDocument={(path) => {
                 loadDocument(path);
                 // Close sidebar on mobile after selecting document

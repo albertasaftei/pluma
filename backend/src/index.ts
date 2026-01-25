@@ -8,6 +8,7 @@ import "./db/index.js";
 import { documentsRouter } from "./routes/documents.js";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
+import { organizationsRouter } from "./routes/organizations.js";
 
 const app = new Hono();
 
@@ -51,6 +52,7 @@ app.get("/api/health", (c) =>
 // Routes
 app.route("/api/auth", authRouter);
 app.route("/api/auth/admin", adminRouter);
+app.route("/api/organizations", organizationsRouter);
 app.route("/api/documents", documentsRouter);
 
 // Initialize documents directory

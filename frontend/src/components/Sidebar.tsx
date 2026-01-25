@@ -9,6 +9,7 @@ import {
   filterTreeNodes,
   formatDate,
 } from "~/utils/sidebar.utils";
+import { SettingsMenu } from "./SettingsMenu";
 
 export default function Sidebar(props: SidebarProps) {
   const [showNewDocModal, setShowNewDocModal] = createSignal(false);
@@ -270,7 +271,7 @@ export default function Sidebar(props: SidebarProps) {
             >
               <div class="i-carbon-side-panel-close w-5 h-5" />
             </Button>
-            {props.settingsMenu}
+            <SettingsMenu />
           </div>
 
           {/* Current File Breadcrumb */}

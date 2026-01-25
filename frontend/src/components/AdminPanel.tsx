@@ -127,10 +127,10 @@ export default function AdminPanel(props: AdminPanelProps) {
             <div class="px-6 py-4 border-b border-neutral-700 flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-bold text-neutral-100">
-                  User Management
+                  Global user Management
                 </h2>
                 <p class="text-sm text-neutral-400 mt-1">
-                  Manage organization users and access
+                  Manage global users and access
                 </p>
               </div>
               <Button
@@ -303,7 +303,7 @@ export default function AdminPanel(props: AdminPanelProps) {
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-neutral-400">
                               {formatDate(user.createdAt)}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
+                            <td class="flex items-center justify-end px-4 py-3 whitespace-nowrap text-right text-sm">
                               <Show when={!user.isAdmin}>
                                 <Button
                                   onClick={() => handleDeleteUser(user)}

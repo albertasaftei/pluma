@@ -33,6 +33,11 @@ documentsRouter.use("*", async (c, next) => {
   await next();
 });
 
+// Get organization-specific documents path
+function getOrgDocumentsPath(organizationId: number): string {
+  return path.join(DOCUMENTS_PATH, `org-${organizationId}`);
+}
+
 // Encryption helpers
 function encrypt(text: string): string {
   const iv = crypto.randomBytes(16);
@@ -57,15 +62,23 @@ function decrypt(text: string): string {
 }
 
 // Sanitize path to prevent directory traversal
-function sanitizePath(userPath: string): string {
+function sanitizePath(userPath: string, organizationId: number): string {
   const normalized = path.normalize(userPath).replace(/^(\.\.[\/\\])+/, "");
-  return path.join(DOCUMENTS_PATH, normalized);
+  const orgPath = getOrgDocumentsPath(organizationId);
+  return path.join(orgPath, normalized);
 }
 
 // List all documents and folders
 documentsRouter.get("/list", async (c) => {
   const folderPath = c.req.query("path") || "/";
-  const fullPath = sanitizePath(folderPath);
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
+
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullPath = sanitizePath(folderPath, organizationId);
 
   try {
     await fs.access(fullPath);
@@ -77,7 +90,8 @@ documentsRouter.get("/list", async (c) => {
         .map(async (item) => {
           const itemPath = path.join(fullPath, item.name);
           const stats = await fs.stat(itemPath);
-          const relativePath = path.relative(DOCUMENTS_PATH, itemPath);
+          const orgPath = getOrgDocumentsPath(organizationId);
+          const relativePath = path.relative(orgPath, itemPath);
           const metadataPath = itemPath + ".meta.json";
 
           // Try to load metadata
@@ -110,12 +124,18 @@ documentsRouter.get("/list", async (c) => {
 // Get document content
 documentsRouter.get("/content", async (c) => {
   const filePath = c.req.query("path");
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
 
   if (!filePath) {
     return c.json({ error: "Path is required" }, 400);
   }
 
-  const fullPath = sanitizePath(filePath);
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullPath = sanitizePath(filePath, organizationId);
 
   try {
     const encrypted = await fs.readFile(fullPath, "utf-8");
@@ -143,11 +163,16 @@ documentsRouter.post("/save", async (c) => {
     return c.json({ error: "Path and content are required" }, 400);
   }
 
-  const fullPath = sanitizePath(filePath);
-
   try {
     const user = c.get("user");
+    const organizationId = user.currentOrgId;
     const userId = user.userId;
+
+    if (!organizationId) {
+      return c.json({ error: "No organization context" }, 400);
+    }
+
+    const fullPath = sanitizePath(filePath, organizationId);
 
     // Ensure directory exists
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
@@ -167,8 +192,22 @@ documentsRouter.post("/save", async (c) => {
         .trim() || path.basename(filePath, ".md");
 
     // Update document metadata and FTS index
-    documentQueries.upsert.run(userId, filePath, title, null, stats.size);
-    documentQueries.updateContent.run(content, userId, filePath);
+    documentQueries.upsert.run(
+      organizationId,
+      userId,
+      filePath,
+      title,
+      null,
+      stats.size,
+    );
+
+    // Update FTS content (delete old entry and insert new one)
+    try {
+      documentQueries.updateContent.run(organizationId, filePath);
+    } catch (e) {
+      // Row might not exist in FTS yet, that's ok
+    }
+    documentQueries.insertContent.run(content, organizationId, filePath);
 
     return c.json({ message: "Document saved successfully", path: filePath });
   } catch (error) {
@@ -180,12 +219,18 @@ documentsRouter.post("/save", async (c) => {
 // Create folder
 documentsRouter.post("/folder", async (c) => {
   const { path: folderPath } = await c.req.json();
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
 
   if (!folderPath) {
     return c.json({ error: "Path is required" }, 400);
   }
 
-  const fullPath = sanitizePath(folderPath);
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullPath = sanitizePath(folderPath, organizationId);
 
   try {
     await fs.mkdir(fullPath, { recursive: true });
@@ -199,12 +244,18 @@ documentsRouter.post("/folder", async (c) => {
 // Delete document or folder
 documentsRouter.delete("/delete", async (c) => {
   const filePath = c.req.query("path");
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
 
   if (!filePath) {
     return c.json({ error: "Path is required" }, 400);
   }
 
-  const fullPath = sanitizePath(filePath);
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullPath = sanitizePath(filePath, organizationId);
 
   try {
     const stats = await fs.stat(fullPath);
@@ -234,13 +285,19 @@ documentsRouter.delete("/delete", async (c) => {
 // Rename/move document or folder
 documentsRouter.post("/rename", async (c) => {
   const { oldPath, newPath } = await c.req.json();
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
 
   if (!oldPath || !newPath) {
     return c.json({ error: "Both oldPath and newPath are required" }, 400);
   }
 
-  const fullOldPath = sanitizePath(oldPath);
-  const fullNewPath = sanitizePath(newPath);
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullOldPath = sanitizePath(oldPath, organizationId);
+  const fullNewPath = sanitizePath(newPath, organizationId);
 
   try {
     // Ensure new directory exists
@@ -257,18 +314,21 @@ documentsRouter.post("/rename", async (c) => {
 // Set item color metadata
 documentsRouter.post("/color", async (c) => {
   const { path: itemPath, color } = await c.req.json();
+  const user = c.get("user");
+  const organizationId = user.currentOrgId;
 
   if (!itemPath) {
     return c.json({ error: "Path is required" }, 400);
   }
 
-  const fullPath = sanitizePath(itemPath);
+  if (!organizationId) {
+    return c.json({ error: "No organization context" }, 400);
+  }
+
+  const fullPath = sanitizePath(itemPath, organizationId);
   const metadataPath = fullPath + ".meta.json";
 
   try {
-    const user = c.get("user");
-    const userId = user.userId;
-
     // Verify the file/folder exists
     await fs.access(fullPath);
 
@@ -291,8 +351,30 @@ documentsRouter.post("/color", async (c) => {
     // Save metadata
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
 
-    // Update color in database
-    documentQueries.updateColor.run(color, userId, itemPath);
+    // Check if document exists in database, if not create it
+    const existingDoc = documentQueries.findByOrgAndPath.get(
+      organizationId,
+      itemPath,
+    );
+
+    if (existingDoc) {
+      // Update color in existing document
+      documentQueries.updateColor.run(color, organizationId, itemPath);
+    } else {
+      // Document doesn't exist in DB yet, create it
+      const stats = await fs.stat(fullPath);
+      const fileName = path.basename(itemPath);
+      const title = fileName.replace(/\.(md|txt)$/, "");
+
+      documentQueries.upsert.run(
+        organizationId,
+        user.userId,
+        itemPath,
+        title,
+        color,
+        stats.size,
+      );
+    }
 
     return c.json({ message: "Color updated successfully" });
   } catch (error) {
@@ -304,17 +386,27 @@ documentsRouter.post("/color", async (c) => {
 // Export all documents as encrypted zip
 documentsRouter.post("/export", async (c) => {
   try {
-    const documentsPath = DOCUMENTS_PATH;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const exportFile = path.join("/tmp", `pluma-export-${timestamp}.tar.gz`);
+    const user = c.get("user");
+    const organizationId = user.currentOrgId;
 
-    // Create tar.gz of documents directory
+    if (!organizationId) {
+      return c.json({ error: "No organization context" }, 400);
+    }
+
+    const orgDocumentsPath = getOrgDocumentsPath(organizationId);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const exportFile = path.join(
+      "/tmp",
+      `pluma-export-org${organizationId}-${timestamp}.tar.gz`,
+    );
+
+    // Create tar.gz of organization documents directory
     const { exec } = await import("child_process");
     const { promisify } = await import("util");
     const execAsync = promisify(exec);
 
     await execAsync(
-      `tar -czf ${exportFile} -C ${path.dirname(documentsPath)} ${path.basename(documentsPath)}`,
+      `tar -czf ${exportFile} -C ${path.dirname(orgDocumentsPath)} ${path.basename(orgDocumentsPath)}`,
     );
 
     // Read the file
@@ -326,7 +418,7 @@ documentsRouter.post("/export", async (c) => {
     // Return as download
     return c.body(fileBuffer, 200, {
       "Content-Type": "application/gzip",
-      "Content-Disposition": `attachment; filename="pluma-export-${timestamp}.tar.gz"`,
+      "Content-Disposition": `attachment; filename="pluma-export-org${organizationId}-${timestamp}.tar.gz"`,
     });
   } catch (error) {
     console.error("Error exporting documents:", error);
@@ -337,6 +429,13 @@ documentsRouter.post("/export", async (c) => {
 // Import documents from encrypted zip
 documentsRouter.post("/import", async (c) => {
   try {
+    const user = c.get("user");
+    const organizationId = user.currentOrgId;
+
+    if (!organizationId) {
+      return c.json({ error: "No organization context" }, 400);
+    }
+
     const body = await c.req.parseBody();
     const file = body["file"] as File;
 
@@ -344,7 +443,7 @@ documentsRouter.post("/import", async (c) => {
       return c.json({ error: "No file provided" }, 400);
     }
 
-    const documentsPath = DOCUMENTS_PATH;
+    const orgDocumentsPath = getOrgDocumentsPath(organizationId);
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const tempFile = path.join("/tmp", `pluma-import-${timestamp}.tar.gz`);
 
@@ -352,14 +451,14 @@ documentsRouter.post("/import", async (c) => {
     const buffer = await file.arrayBuffer();
     await fs.writeFile(tempFile, Buffer.from(buffer));
 
-    // Extract to documents directory
+    // Extract to organization documents directory
     const { exec } = await import("child_process");
     const { promisify } = await import("util");
     const execAsync = promisify(exec);
 
-    // Extract archive - strip the top 'documents' folder name
+    // Extract archive - strip the top folder name (e.g., 'org-1')
     await execAsync(
-      `tar -xzf ${tempFile} -C ${documentsPath} --strip-components=1`,
+      `tar -xzf ${tempFile} -C ${orgDocumentsPath} --strip-components=1`,
     );
 
     // Clean up temp file
@@ -382,10 +481,14 @@ documentsRouter.get("/search", async (c) => {
 
   try {
     const user = c.get("user");
-    const userId = user.userId;
+    const organizationId = user.currentOrgId;
+
+    if (!organizationId) {
+      return c.json({ error: "No organization context" }, 400);
+    }
 
     // Search using SQLite FTS5
-    const results = documentQueries.search.all(userId, query) as any[];
+    const results = documentQueries.search.all(organizationId, query) as any[];
 
     // Return results with relevant info
     const searchResults = results.map((doc) => ({

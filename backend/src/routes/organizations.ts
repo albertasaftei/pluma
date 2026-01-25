@@ -1,0 +1,334 @@
+import { Hono } from "hono";
+import { SignJWT } from "jose";
+import { JWT_SECRET } from "../config.js";
+import {
+  organizationQueries,
+  memberQueries,
+  userQueries,
+  sessionQueries,
+} from "../db/index.js";
+import { authMiddleware } from "../middlewares/auth.js";
+
+type Variables = {
+  user: any;
+};
+
+const organizationsRouter = new Hono<{ Variables: Variables }>();
+const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
+
+// All routes require authentication
+organizationsRouter.use("*", authMiddleware);
+
+// List user's organizations
+organizationsRouter.get("/", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const organizations = organizationQueries.listByUser.all(
+      user.userId,
+    ) as any[];
+
+    // Add member role for each organization
+    const orgsWithRoles = organizations.map((org) => {
+      const membership = memberQueries.findMembership.get(
+        org.id,
+        user.userId,
+      ) as any;
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        role: membership?.role || "member",
+        createdAt: org.created_at,
+      };
+    });
+
+    return c.json({ organizations: orgsWithRoles });
+  } catch (error) {
+    console.error("Error listing organizations:", error);
+    return c.json({ error: "Failed to list organizations" }, 500);
+  }
+});
+
+// Get organization details
+organizationsRouter.get("/:id", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+
+    // Verify user has access
+    const membership = memberQueries.findMembership.get(
+      orgId,
+      user.userId,
+    ) as any;
+    if (!membership) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    const org = organizationQueries.findById.get(orgId) as any;
+    if (!org) {
+      return c.json({ error: "Organization not found" }, 404);
+    }
+
+    return c.json({
+      organization: {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        role: membership.role,
+        createdAt: org.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting organization:", error);
+    return c.json({ error: "Failed to get organization" }, 500);
+  }
+});
+
+// Switch active organization
+organizationsRouter.post("/:id/switch", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+
+    // Verify user has access
+    const membership = memberQueries.findMembership.get(
+      orgId,
+      user.userId,
+    ) as any;
+    if (!membership) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    // Get organization details
+    const org = organizationQueries.findById.get(orgId) as any;
+    if (!org) {
+      return c.json({ error: "Organization not found" }, 404);
+    }
+
+    // Generate new JWT with updated organization context
+    const token = await new SignJWT({
+      userId: user.userId,
+      username: user.username,
+      isAdmin: user.isAdmin,
+      currentOrgId: orgId,
+      orgRole: membership.role,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("30d")
+      .sign(jwtSecretKey);
+
+    // Update session with new token and organization
+    const authHeader = c.req.header("Authorization");
+    const oldToken = authHeader!.substring(7);
+
+    // Get session info
+    const session = sessionQueries.findByToken.get(oldToken) as any;
+    if (session) {
+      // Delete old session
+      sessionQueries.deleteByToken.run(oldToken);
+
+      // Create new session with new token
+      const expiresAt = new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      sessionQueries.create.run(
+        session.id,
+        user.userId,
+        token,
+        orgId,
+        expiresAt,
+      );
+    }
+
+    return c.json({
+      message: "Organization switched successfully",
+      organizationId: orgId,
+      token, // Return new token
+      organization: {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        role: membership.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error switching organization:", error);
+    return c.json({ error: "Failed to switch organization" }, 500);
+  }
+});
+
+// Update organization (admin only)
+organizationsRouter.put("/:id", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+
+    // Verify user is admin
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    if (!isAdmin || isAdmin.count === 0) {
+      return c.json({ error: "Admin access required" }, 403);
+    }
+
+    const { name, slug } = await c.req.json();
+
+    if (!name || !slug) {
+      return c.json({ error: "Name and slug are required" }, 400);
+    }
+
+    organizationQueries.update.run(name, slug, orgId);
+
+    return c.json({ message: "Organization updated successfully" });
+  } catch (error: any) {
+    console.error("Error updating organization:", error);
+    if (error.message.includes("UNIQUE")) {
+      return c.json({ error: "Slug already exists" }, 400);
+    }
+    return c.json({ error: "Failed to update organization" }, 500);
+  }
+});
+
+// List organization members (members can view)
+organizationsRouter.get("/:id/members", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+
+    // Verify user has access
+    const membership = memberQueries.findMembership.get(
+      orgId,
+      user.userId,
+    ) as any;
+    if (!membership) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    // Get organization to know the owner
+    const org = organizationQueries.findById.get(orgId) as any;
+    const ownerId = org?.owner_id;
+
+    const members = memberQueries.listByOrganization.all(orgId) as any[];
+
+    const memberList = members.map((m) => ({
+      id: m.user_id,
+      username: m.username,
+      email: m.email,
+      role: m.role,
+      joinedAt: m.joined_at,
+      isOwner: m.user_id === ownerId,
+    }));
+
+    return c.json({ members: memberList });
+  } catch (error) {
+    console.error("Error listing members:", error);
+    return c.json({ error: "Failed to list members" }, 500);
+  }
+});
+
+// Add member to organization (admin only)
+organizationsRouter.post("/:id/members", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+
+    // Verify user is admin
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    if (!isAdmin || isAdmin.count === 0) {
+      return c.json({ error: "Admin access required" }, 403);
+    }
+
+    const { username, role = "member" } = await c.req.json();
+
+    if (!username) {
+      return c.json({ error: "Username is required" }, 400);
+    }
+
+    if (role !== "admin" && role !== "member") {
+      return c.json({ error: "Invalid role" }, 400);
+    }
+
+    // Find user by username
+    const targetUser = userQueries.findByUsername.get(username) as any;
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Check if already a member
+    const existing = memberQueries.findMembership.get(orgId, targetUser.id);
+    if (existing) {
+      return c.json({ error: "User is already a member" }, 400);
+    }
+
+    memberQueries.add.run(orgId, targetUser.id, role);
+
+    return c.json({ message: "Member added successfully" });
+  } catch (error) {
+    console.error("Error adding member:", error);
+    return c.json({ error: "Failed to add member" }, 500);
+  }
+});
+
+// Update member role (admin only)
+organizationsRouter.put("/:id/members/:userId", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+    const targetUserId = parseInt(c.req.param("userId"));
+
+    // Verify user is admin
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    if (!isAdmin || isAdmin.count === 0) {
+      return c.json({ error: "Admin access required" }, 403);
+    }
+
+    const { role } = await c.req.json();
+
+    if (role !== "admin" && role !== "member") {
+      return c.json({ error: "Invalid role" }, 400);
+    }
+
+    memberQueries.updateRole.run(role, orgId, targetUserId);
+
+    return c.json({ message: "Member role updated successfully" });
+  } catch (error) {
+    console.error("Error updating member role:", error);
+    return c.json({ error: "Failed to update member role" }, 500);
+  }
+});
+
+// Remove member from organization (admin only)
+organizationsRouter.delete("/:id/members/:userId", async (c) => {
+  try {
+    const user = c.get("user") as any;
+    const orgId = parseInt(c.req.param("id"));
+    const targetUserId = parseInt(c.req.param("userId"));
+
+    // Verify user is admin
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    if (!isAdmin || isAdmin.count === 0) {
+      return c.json({ error: "Admin access required" }, 403);
+    }
+
+    // Can't remove yourself
+    if (targetUserId === user.userId) {
+      return c.json(
+        { error: "Cannot remove yourself from the organization" },
+        400,
+      );
+    }
+
+    // Can't remove the organization owner
+    const org = organizationQueries.findById.get(orgId) as any;
+    if (org && org.owner_id === targetUserId) {
+      return c.json({ error: "Cannot remove the organization owner" }, 403);
+    }
+
+    memberQueries.remove.run(orgId, targetUserId);
+
+    return c.json({ message: "Member removed successfully" });
+  } catch (error) {
+    console.error("Error removing member:", error);
+    return c.json({ error: "Failed to remove member" }, 500);
+  }
+});
+
+export { organizationsRouter };

@@ -1,6 +1,6 @@
 # Pluma
 
-A self-hosted markdown editor with live preview, document encryption, dark theme, and multi-user support.
+A self-hosted markdown editor with live preview, document encryption, multi-user support, and **multi-organization** capabilities.
 
 ## Quick Start
 
@@ -32,9 +32,9 @@ A self-hosted markdown editor with live preview, document encryption, dark theme
 
 3. Access the application at **http://localhost:3000**
 
-4. Create your admin account on first visit
+4. Create your admin account on first visit - this will automatically create your personal organization
 
-### Manual Setup
+## Configuration
 
 If you prefer to set up manually:
 

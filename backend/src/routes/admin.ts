@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import bcrypt from "bcrypt";
-import { userQueries } from "../db/index.js";
+import {
+  userQueries,
+  organizationQueries,
+  memberQueries,
+} from "../db/index.js";
 import { adminMiddleware, UserContext } from "../middlewares/auth.js";
 
 const adminRouter = new Hono<{ Variables: { user: UserContext } }>();
@@ -41,7 +45,22 @@ adminRouter.post("/users", async (c) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     try {
-      userQueries.create.run(username, email, passwordHash);
+      // Create user
+      const result = userQueries.create.run(username, email, passwordHash);
+      const userId = result.lastInsertRowid as number;
+
+      // Create personal organization for the new user
+      const orgSlug = `${username}-personal`;
+      const orgResult = organizationQueries.create.run(
+        `${username}'s Organization`,
+        orgSlug,
+        userId,
+      );
+      const orgId = orgResult.lastInsertRowid as number;
+
+      // Add user as admin of their organization
+      memberQueries.add.run(orgId, userId, "admin");
+
       return c.json({ message: "User created successfully" });
     } catch (error: any) {
       if (error.message.includes("UNIQUE")) {

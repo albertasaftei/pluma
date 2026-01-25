@@ -1,6 +1,8 @@
 import { createSignal, createEffect, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { api } from "~/lib/api";
+import Logo from "~/components/Logo";
+import Button from "~/components/Button";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -82,9 +84,9 @@ export default function Home() {
         }
       >
         <div class="w-full max-w-md">
-          <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-neutral-100 mb-2">Pluma</h1>
-            <p class="text-neutral-400">Self-hosted Markdown Editor</p>
+          <div class="flex gap-4 items-center justify-center mb-8">
+            <Logo color="#2a9d8f" size="48" />
+            <span class="text-4xl font-bold text-neutral-100 mb-2">pluma</span>
           </div>
 
           <div class="bg-neutral-900 rounded-lg p-8 border border-neutral-800">
@@ -170,12 +172,13 @@ export default function Home() {
                 </div>
               </Show>
 
-              <button
+              <Button
+                variant="primary"
                 type="submit"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                class="w-full py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors"
               >
                 {isSetup() ? "Complete Setup" : "Login"}
-              </button>
+              </Button>
             </form>
           </div>
 

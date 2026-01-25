@@ -8,7 +8,6 @@ export interface SidebarProps {
   setSidebarOpen: (open: boolean) => void;
   saveStatus: "saved" | "saving" | "unsaved";
   expandedFolders: Set<string>;
-  settingsMenu: JSX.Element;
   onSelectDocument: (path: string) => void;
   onCreateDocument: (name: string, folderPath?: string) => void;
   onCreateFolder: (name: string, parentPath?: string) => void;

@@ -1,5 +1,5 @@
-import { For, Show } from "solid-js";
-import type { Document } from "~/lib/api";
+import { For, Show, createSignal, onMount } from "solid-js";
+import { api, type Document } from "~/lib/api";
 
 interface DashboardProps {
   documents: Document[];
@@ -7,6 +7,17 @@ interface DashboardProps {
 }
 
 export default function Dashboard(props: DashboardProps) {
+  const [currentOrg, setCurrentOrg] = createSignal<{
+    id: number;
+    name: string;
+    slug: string;
+    role: string;
+  } | null>(null);
+
+  onMount(() => {
+    setCurrentOrg(api.getCurrentOrganization());
+  });
+
   // Get all files (not folders) and sort by modified date
   const recentDocuments = () => {
     return props.documents
@@ -66,7 +77,8 @@ export default function Dashboard(props: DashboardProps) {
         <div class="mb-8">
           <h1 class="text-3xl font-bold text-neutral-100 mb-2">Dashboard</h1>
           <p class="text-neutral-400">
-            Welcome back! Here are your recently edited documents.
+            {currentOrg() ? `${currentOrg()!.name} - ` : ""}Welcome back! Here
+            are your recently edited documents.
           </p>
         </div>
 

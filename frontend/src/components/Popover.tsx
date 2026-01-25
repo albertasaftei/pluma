@@ -31,7 +31,7 @@ export default function Popover(props: PopoverProps) {
   });
 
   return (
-    <div class="relative">
+    <div class="relative flex items-center">
       <div ref={triggerRef}>{props.trigger}</div>
       <Show when={props.isOpen}>
         <div

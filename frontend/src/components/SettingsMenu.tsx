@@ -94,7 +94,7 @@ export function SettingsMenu() {
             size="md"
             title="Settings"
           >
-            <div class="i-carbon-settings w-5 h-5" />
+            <div class="i-carbon-overflow-menu-vertical w-5 h-5" />
           </Button>
         }
       >

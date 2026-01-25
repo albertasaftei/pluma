@@ -31,6 +31,7 @@ export class ApiClient {
     this.token = null;
     if (typeof window !== "undefined") {
       localStorage.removeItem("pluma_token");
+      localStorage.removeItem("pluma_current_org");
     }
   }
 
@@ -99,12 +100,46 @@ export class ApiClient {
       token: string;
       username: string;
       isAdmin?: boolean;
+      currentOrganization: {
+        id: number;
+        name: string;
+        slug: string;
+        role: string;
+      };
     }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
     this.setToken(result.token);
+
+    // Store current organization in localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "pluma_current_org",
+        JSON.stringify(result.currentOrganization),
+      );
+    }
+
     return result;
+  }
+
+  getCurrentOrganization(): {
+    id: number;
+    name: string;
+    slug: string;
+    role: string;
+  } | null {
+    if (typeof window !== "undefined") {
+      const orgStr = localStorage.getItem("pluma_current_org");
+      if (orgStr) {
+        try {
+          return JSON.parse(orgStr);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   isAdmin(): boolean {
@@ -112,7 +147,105 @@ export class ApiClient {
     return decoded?.isAdmin ?? false;
   }
 
-  // Admin - User Management
+  isOrgAdmin(): boolean {
+    const org = this.getCurrentOrganization();
+    return org?.role === "admin";
+  }
+
+  // Organizations
+  async listOrganizations() {
+    return this.request<{
+      organizations: Array<{
+        id: number;
+        name: string;
+        slug: string;
+        role: string;
+        createdAt: string;
+      }>;
+    }>("/api/organizations");
+  }
+
+  async getOrganization(orgId: number) {
+    return this.request<{
+      organization: {
+        id: number;
+        name: string;
+        slug: string;
+        role: string;
+        createdAt: string;
+      };
+    }>(`/api/organizations/${orgId}`);
+  }
+
+  async switchOrganization(orgId: number) {
+    const result = await this.request<{
+      message: string;
+      organizationId: number;
+      token: string;
+      organization: {
+        id: number;
+        name: string;
+        slug: string;
+        role: string;
+      };
+    }>(`/api/organizations/${orgId}/switch`, {
+      method: "POST",
+    });
+
+    // Update token with new JWT
+    this.setToken(result.token);
+
+    // Update localStorage with new organization
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "pluma_current_org",
+        JSON.stringify(result.organization),
+      );
+    }
+
+    return result;
+  }
+
+  async updateOrganization(orgId: number, name: string, slug: string) {
+    return this.request(`/api/organizations/${orgId}`, {
+      method: "PUT",
+      body: JSON.stringify({ name, slug }),
+    });
+  }
+
+  async listOrgMembers(orgId: number) {
+    return this.request<{
+      members: Array<{
+        id: number;
+        username: string;
+        email: string;
+        role: string;
+        joinedAt: string;
+      }>;
+    }>(`/api/organizations/${orgId}/members`);
+  }
+
+  async addOrgMember(orgId: number, username: string, role: string = "member") {
+    return this.request(`/api/organizations/${orgId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ username, role }),
+    });
+  }
+
+  async updateOrgMemberRole(orgId: number, userId: number, role: string) {
+    return this.request(`/api/organizations/${orgId}/members/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeOrgMember(orgId: number, userId: number) {
+    return this.request(`/api/organizations/${orgId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Admin - User Management (Global Admin)
   async listUsers() {
     return this.request<{
       users: Array<{
