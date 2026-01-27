@@ -9,10 +9,10 @@ import {
   memberQueries,
 } from "../db/index.js";
 import crypto from "crypto";
-import { UserContext } from "../middlewares/auth.types.js";
+import { UserJWTPayload } from "../middlewares/auth.types.js";
 
 type Variables = {
-  user: UserContext;
+  user: UserJWTPayload;
 };
 
 const authRouter = new Hono<{ Variables: Variables }>();

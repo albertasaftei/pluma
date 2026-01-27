@@ -1,4 +1,4 @@
-export interface UserContext {
+export interface UserJWTPayload {
   userId: number;
   username: string;
   isAdmin: boolean;

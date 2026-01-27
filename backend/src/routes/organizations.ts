@@ -8,10 +8,10 @@ import {
   sessionQueries,
 } from "../db/index.js";
 import { authMiddleware } from "../middlewares/auth.js";
-import { UserContext } from "../middlewares/auth.types.js";
+import { UserJWTPayload } from "../middlewares/auth.types.js";
 
 type Variables = {
-  user: UserContext;
+  user: UserJWTPayload;
 };
 
 const organizationsRouter = new Hono<{ Variables: Variables }>();

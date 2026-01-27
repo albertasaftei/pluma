@@ -1,12 +1,14 @@
 import { jwtVerify } from "jose";
 import { JWT_SECRET } from "../config.js";
 import { sessionQueries } from "../db/index.js";
-import { UserContext } from "./auth.types.js";
+import { UserJWTPayload } from "./auth.types.js";
 
 const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
 
 // Verify token helper
-export async function verifyToken(token: string): Promise<UserContext | null> {
+export async function verifyToken(
+  token: string,
+): Promise<UserJWTPayload | null> {
   try {
     // Check if session exists and is valid
     const session = sessionQueries.findByToken.get(token);
@@ -21,7 +23,7 @@ export async function verifyToken(token: string): Promise<UserContext | null> {
     }
 
     // Verify JWT
-    const { payload }: { payload: UserContext } = await jwtVerify(
+    const { payload }: { payload: UserJWTPayload } = await jwtVerify(
       token,
       jwtSecretKey,
     );

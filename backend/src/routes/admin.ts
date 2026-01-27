@@ -6,10 +6,9 @@ import {
   memberQueries,
 } from "../db/index.js";
 import { adminMiddleware } from "../middlewares/auth.js";
-import { User } from "../db/index.types.js";
-import { UserContext } from "../middlewares/auth.types.js";
+import { UserJWTPayload } from "../middlewares/auth.types.js";
 
-const adminRouter = new Hono<{ Variables: { user: UserContext } }>();
+const adminRouter = new Hono<{ Variables: { user: UserJWTPayload } }>();
 
 // All admin routes require admin middleware
 adminRouter.use("*", adminMiddleware);

@@ -5,7 +5,6 @@ export interface User {
   password_hash: string;
   created_at: string;
   updated_at: string;
-  isAdmin: boolean;
 }
 
 export interface Organization {

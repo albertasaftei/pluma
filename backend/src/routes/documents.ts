@@ -5,10 +5,10 @@ import crypto from "crypto";
 import { ENCRYPTION_KEY } from "../config.js";
 import { documentQueries } from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
-import { UserContext } from "../middlewares/auth.types.js";
+import { UserJWTPayload } from "../middlewares/auth.types.js";
 
 type Variables = {
-  user: UserContext;
+  user: UserJWTPayload;
 };
 
 const documentsRouter = new Hono<{ Variables: Variables }>();
