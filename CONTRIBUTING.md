@@ -23,13 +23,6 @@ Access at `http://localhost:3000`. Create your admin account on first visit (min
 
 ### Production Deployment
 
-Using the setup script:
-
-```bash
-chmod +x setup.sh
-./setup.sh
-```
-
 Manual Docker deployment:
 
 ```bash
@@ -171,13 +164,6 @@ docker-compose up -d
   - Proxy to frontend and backend
   - Security headers
   - Proper WebSocket support
-
-- **Setup Script** ([setup.sh](setup.sh))
-  - Automated deployment
-  - Secure key generation
-  - Optional SSL setup
-  - Docker orchestration
-  - User-friendly prompts
 
 ## Environment Variables
 
