@@ -35,7 +35,7 @@ export async function verifyToken(
 }
 
 // Auth middleware - requires valid token
-export const authMiddleware = async (c: any, next: any) => {
+export const authMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return c.json({ error: "Unauthorized" }, 401);
