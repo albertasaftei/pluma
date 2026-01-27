@@ -44,7 +44,7 @@ For development without Docker, you can use `.env` file:
 ```env
 JWT_SECRET=your-jwt-secret-here
 ENCRYPTION_KEY=your-encryption-key-here
-PORT=3001
+BACKEND_INTERNAL_PORT=3001
 ```
 
 ## Backup and Restore
@@ -59,7 +59,7 @@ docker-compose --profile backup up -d
 
 See [BACKUP.md](BACKUP.md) for detailed backup/restore procedures.
 
-### Manual Backup
+### Create manual Backup or just use the in app export button
 
 Create a one-time backup of all data (documents + database):
 
@@ -70,7 +70,7 @@ docker run --rm \
   alpine tar czf /backup/pluma-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
 ```
 
-### Restore from Backup
+### Restore manually from Backup or just use the in app import button
 
 ```bash
 docker run --rm \
@@ -78,8 +78,6 @@ docker run --rm \
   -v $(pwd)/backups:/backup \
   alpine sh -c "rm -rf /data/* && tar xzf /backup/pluma-backup-YYYYMMDD-HHMMSS.tar.gz -C /data"
 ```
-
-**⚠️ Important:** Also backup your `secrets/` directory separately! Without these secrets, you cannot decrypt your documents.
 
 ## Development
 
@@ -104,20 +102,16 @@ docker run --rm \
 3. Set up environment variables in `backend/.env`:
 
    ```env
-   JWT_SECRET=dev-jwt-secret-key
-   ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-   PORT=3001
+   JWT_SECRET=your-jwt-secret-here
+   ENCRYPTION_KEY=your-encryption-key-here
+   BACKEND_INTERNAL_PORT=3001
    DB_PATH=./data/pluma.db
    DOCUMENTS_PATH=./data/documents
    ```
 
 ### Lost Encryption Key
 
-If you lose the encryption key, documents cannot be decrypted. Always maintain secure backups of:
-
-- `secrets/encryption_key.txt`
-- `secrets/jwt_secret.txt`
-- Document data volume
+If you lose the encryption key, documents cannot be decrypted. Always maintain secure backups.
 
 ## Roadmap
 

@@ -174,7 +174,7 @@ docker-compose up -d
 
 ### Optional
 
-- `PORT` - Backend port (default: 3001)
+- `BACKEND_INTERNAL_PORT` - Backend port (default: 3001)
 - `DOCUMENTS_PATH` - Document storage path (default: ./documents)
 - `AUTH_FILE` - User data file (default: ./auth.json)
 - `FRONTEND_URL` - Frontend URL for CORS (default: http://localhost:3000)

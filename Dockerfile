@@ -55,7 +55,7 @@ RUN mkdir -p /data/documents
 
 # Environment variables
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV BACKEND_INTERNAL_PORT=3001
 ENV DOCUMENTS_PATH=/data/documents
 ENV DB_PATH=/data/pluma.db
 

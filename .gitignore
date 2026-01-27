@@ -10,13 +10,6 @@ app.config.timestamp_*.js
 .env
 .env*.local
 
-# Secrets (NEVER commit these!)
-secrets/
-*.key
-*.pem
-jwt_secret.txt
-encryption_key.txt
-
 # Backups (local storage only)
 backups/
 *.tar.gz
