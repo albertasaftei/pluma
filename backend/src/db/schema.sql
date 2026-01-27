@@ -59,16 +59,14 @@ CREATE TABLE IF NOT EXISTS documents (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Full-text search virtual table
+-- Full-text search virtual table (standalone, not content-backed)
 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
     path,
     title,
-    content,
-    content='documents',
-    content_rowid='id'
+    content
 );
 
--- Trigger to keep FTS index in sync
+-- Triggers to keep FTS index in sync with documents table
 CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN
     INSERT INTO documents_fts(rowid, path, title, content)
     VALUES (new.id, new.path, new.title, '');
@@ -79,9 +77,8 @@ CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN
 END;
 
 CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE OF path, title ON documents BEGIN
-    DELETE FROM documents_fts WHERE rowid = old.id;
-    INSERT INTO documents_fts(rowid, path, title, content)
-    VALUES (new.id, new.path, new.title, '');
+    UPDATE documents_fts SET path = new.path, title = new.title
+    WHERE rowid = new.id;
 END;
 
 -- Create indexes

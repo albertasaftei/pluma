@@ -182,13 +182,17 @@ export const documentQueries = {
     ORDER BY rank
   `),
   updateContent: db.prepare(`
-    INSERT INTO documents_fts(documents_fts, rowid, path, title, content) 
-    VALUES('delete', (SELECT id FROM documents WHERE organization_id = ? AND path = ?), NULL, NULL, NULL)
+    DELETE FROM documents_fts 
+    WHERE rowid = (SELECT id FROM documents WHERE organization_id = ? AND path = ?)
   `),
   insertContent: db.prepare(`
     INSERT INTO documents_fts(rowid, path, title, content)
-    SELECT id, path, title, ? FROM documents 
-    WHERE organization_id = ? AND path = ?
+    VALUES (
+      (SELECT id FROM documents WHERE organization_id = ? AND path = ?),
+      ?,
+      (SELECT title FROM documents WHERE organization_id = ? AND path = ?),
+      ?
+    )
   `),
 };
 

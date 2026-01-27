@@ -207,7 +207,14 @@ documentsRouter.post("/save", async (c) => {
     } catch (e) {
       // Row might not exist in FTS yet, that's ok
     }
-    documentQueries.insertContent.run(content, organizationId, filePath);
+    documentQueries.insertContent.run(
+      organizationId,
+      filePath,
+      filePath,
+      organizationId,
+      filePath,
+      content,
+    );
 
     return c.json({ message: "Document saved successfully", path: filePath });
   } catch (error) {
