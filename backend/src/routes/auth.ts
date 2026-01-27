@@ -69,14 +69,14 @@ authRouter.post("/login", async (c) => {
   try {
     const { username, password } = await c.req.json();
 
-    const user = userQueries.findByUsername.get(username) as any;
+    const user = userQueries.findByUsername.get(username);
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
     // Get user's organizations
-    const organizations = organizationQueries.listByUser.all(user.id) as any[];
+    const organizations = organizationQueries.listByUser.all(user.id);
 
     if (organizations.length === 0) {
       return c.json({ error: "No organization found for user" }, 500);
@@ -84,10 +84,7 @@ authRouter.post("/login", async (c) => {
 
     // Use first organization as default (usually personal org)
     const currentOrg = organizations[0];
-    const membership = memberQueries.findMembership.get(
-      currentOrg.id,
-      user.id,
-    ) as any;
+    const membership = memberQueries.findMembership.get(currentOrg.id, user.id);
 
     // Check if user is global admin (first user)
     const isGlobalAdmin = user.id === 1;

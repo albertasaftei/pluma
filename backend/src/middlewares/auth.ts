@@ -1,14 +1,15 @@
 import { jwtVerify } from "jose";
 import { JWT_SECRET } from "../config.js";
 import { sessionQueries } from "../db/index.js";
+import { UserContext } from "./auth.types.js";
 
 const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
 
 // Verify token helper
-export async function verifyToken(token: string) {
+export async function verifyToken(token: string): Promise<UserContext | null> {
   try {
     // Check if session exists and is valid
-    const session = sessionQueries.findByToken.get(token) as any;
+    const session = sessionQueries.findByToken.get(token);
     if (!session) {
       return null;
     }
@@ -20,22 +21,17 @@ export async function verifyToken(token: string) {
     }
 
     // Verify JWT
-    const { payload } = await jwtVerify(token, jwtSecretKey);
+    const { payload }: { payload: UserContext } = await jwtVerify(
+      token,
+      jwtSecretKey,
+    );
     return payload;
   } catch {
     return null;
   }
 }
 
-export interface UserContext {
-  userId: number;
-  username: string;
-  isAdmin: boolean;
-  currentOrgId?: number;
-  orgRole?: string;
-  exp: number;
-}
-
+// ! Fix typescript
 // Auth middleware - requires valid token
 export const authMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header("Authorization");
@@ -54,6 +50,7 @@ export const authMiddleware = async (c: any, next: any) => {
   await next();
 };
 
+// ! Fix typescript
 // Admin middleware - requires valid token AND admin role
 export const adminMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header("Authorization");

@@ -5,7 +5,9 @@ import {
   organizationQueries,
   memberQueries,
 } from "../db/index.js";
-import { adminMiddleware, UserContext } from "../middlewares/auth.js";
+import { adminMiddleware } from "../middlewares/auth.js";
+import { User } from "../db/index.types.js";
+import { UserContext } from "../middlewares/auth.types.js";
 
 const adminRouter = new Hono<{ Variables: { user: UserContext } }>();
 
@@ -15,7 +17,7 @@ adminRouter.use("*", adminMiddleware);
 // List all users
 adminRouter.get("/users", async (c) => {
   try {
-    const users = userQueries.listAll.all() as any[];
+    const users = userQueries.listAll.all() as User[];
     const userList = users.map((user) => ({
       id: user.id,
       username: user.username,

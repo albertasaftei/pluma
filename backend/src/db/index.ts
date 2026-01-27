@@ -4,6 +4,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { runMigrations } from "./migrations.js";
 import { allMigrations } from "./migrations/index.js";
+import {
+  Document,
+  Organization,
+  OrganizationMember,
+  Session,
+  User,
+} from "./index.types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,129 +44,96 @@ if (isNewDatabase) {
 console.log("🔄 Checking for pending migrations...");
 runMigrations(db, allMigrations);
 
-// Helper functions
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  password_hash: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Organization {
-  id: number;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface OrganizationMember {
-  id: number;
-  organization_id: number;
-  user_id: number;
-  role: string;
-  joined_at: string;
-}
-
-export interface Session {
-  id: string;
-  user_id: number;
-  token: string;
-  current_organization_id: number | null;
-  expires_at: string;
-  created_at: string;
-}
-
-export interface Document {
-  id: number;
-  organization_id: number;
-  user_id: number;
-  path: string;
-  title: string;
-  color: string | null;
-  size: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// User queries
+// === User Queries ===
 export const userQueries = {
-  create: db.prepare(
+  create: db.prepare<[string, string, string]>(
     "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
   ),
-  findByUsername: db.prepare("SELECT * FROM users WHERE username = ?"),
-  findByEmail: db.prepare("SELECT * FROM users WHERE email = ?"),
-  findById: db.prepare("SELECT * FROM users WHERE id = ?"),
-  listAll: db.prepare("SELECT * FROM users ORDER BY id ASC"),
-  deleteById: db.prepare("DELETE FROM users WHERE id = ?"),
-  updatePassword: db.prepare(
+  findByUsername: db.prepare<[string], User>(
+    "SELECT * FROM users WHERE username = ?",
+  ),
+  findByEmail: db.prepare<[string], User>(
+    "SELECT * FROM users WHERE email = ?",
+  ),
+  findById: db.prepare<[number], User>("SELECT * FROM users WHERE id = ?"),
+  listAll: db.prepare<[], User>("SELECT * FROM users ORDER BY id ASC"),
+  deleteById: db.prepare<[number]>("DELETE FROM users WHERE id = ?"),
+  updatePassword: db.prepare<[string, number]>(
     "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   ),
 };
 
-// Organization queries
+// === Organization Queries ===
 export const organizationQueries = {
-  create: db.prepare(
+  create: db.prepare<[string, string, number]>(
     "INSERT INTO organizations (name, slug, owner_id) VALUES (?, ?, ?)",
   ),
-  findById: db.prepare("SELECT * FROM organizations WHERE id = ?"),
-  findBySlug: db.prepare("SELECT * FROM organizations WHERE slug = ?"),
-  listByUser: db.prepare(`
+  findById: db.prepare<[number], Organization>(
+    "SELECT * FROM organizations WHERE id = ?",
+  ),
+  findBySlug: db.prepare<[string], Organization>(
+    "SELECT * FROM organizations WHERE slug = ?",
+  ),
+  listByUser: db.prepare<[number], Organization>(`
     SELECT o.* FROM organizations o
     JOIN organization_members om ON o.id = om.organization_id
     WHERE om.user_id = ?
     ORDER BY om.joined_at DESC
   `),
-  update: db.prepare(
+  update: db.prepare<[string, string, number]>(
     "UPDATE organizations SET name = ?, slug = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   ),
-  delete: db.prepare("DELETE FROM organizations WHERE id = ?"),
+  delete: db.prepare<[number]>("DELETE FROM organizations WHERE id = ?"),
 };
 
-// Organization member queries
+// === Organization Member Queries ===
 export const memberQueries = {
-  add: db.prepare(
+  add: db.prepare<[number, number, string]>(
     "INSERT INTO organization_members (organization_id, user_id, role) VALUES (?, ?, ?)",
   ),
-  findMembership: db.prepare(
+  findMembership: db.prepare<[number, number], OrganizationMember>(
     "SELECT * FROM organization_members WHERE organization_id = ? AND user_id = ?",
   ),
-  listByOrganization: db.prepare(`
+  listByOrganization: db.prepare<[number], OrganizationMember>(`
     SELECT om.*, u.username, u.email FROM organization_members om
     JOIN users u ON om.user_id = u.id
     WHERE om.organization_id = ?
     ORDER BY om.role DESC, om.joined_at ASC
   `),
-  updateRole: db.prepare(
+  updateRole: db.prepare<[string, number, number]>(
     "UPDATE organization_members SET role = ? WHERE organization_id = ? AND user_id = ?",
   ),
-  remove: db.prepare(
+  remove: db.prepare<[number, number]>(
     "DELETE FROM organization_members WHERE organization_id = ? AND user_id = ?",
   ),
-  isAdmin: db.prepare(
+  isAdmin: db.prepare<[number, number], { count: number }>(
     "SELECT COUNT(*) as count FROM organization_members WHERE organization_id = ? AND user_id = ? AND role = 'admin'",
   ),
 };
 
-// Session queries
+// === Session Queries ===
 export const sessionQueries = {
-  create: db.prepare(
+  create: db.prepare<[string, number, string, number | null, string]>(
     "INSERT INTO sessions (id, user_id, token, current_organization_id, expires_at) VALUES (?, ?, ?, ?, ?)",
   ),
-  findByToken: db.prepare("SELECT * FROM sessions WHERE token = ?"),
-  updateOrganization: db.prepare(
+  findByToken: db.prepare<[string], Session>(
+    "SELECT * FROM sessions WHERE token = ?",
+  ),
+  updateOrganization: db.prepare<[number, string]>(
     "UPDATE sessions SET current_organization_id = ? WHERE token = ?",
   ),
-  deleteByToken: db.prepare("DELETE FROM sessions WHERE token = ?"),
-  deleteExpired: db.prepare("DELETE FROM sessions WHERE expires_at < ?"),
-  deleteByUserId: db.prepare("DELETE FROM sessions WHERE user_id = ?"),
+  deleteByToken: db.prepare<[string]>("DELETE FROM sessions WHERE token = ?"),
+  deleteExpired: db.prepare<[string]>(
+    "DELETE FROM sessions WHERE expires_at < ?",
+  ),
+  deleteByUserId: db.prepare<[number]>(
+    "DELETE FROM sessions WHERE user_id = ?",
+  ),
 };
 
-// Document queries
+// === Document Queries ===
 export const documentQueries = {
-  upsert: db.prepare(`
+  upsert: db.prepare<[number, number, string, string, string | null, number]>(`
     INSERT INTO documents (organization_id, user_id, path, title, color, size, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(organization_id, path) DO UPDATE SET
@@ -168,32 +142,32 @@ export const documentQueries = {
       size = excluded.size,
       updated_at = CURRENT_TIMESTAMP
   `),
-  findByOrgAndPath: db.prepare(
+  findByOrgAndPath: db.prepare<[number, string], Document>(
     "SELECT * FROM documents WHERE organization_id = ? AND path = ?",
   ),
-  listByOrganization: db.prepare(
+  listByOrganization: db.prepare<[number], Document>(
     "SELECT * FROM documents WHERE organization_id = ? ORDER BY updated_at DESC",
   ),
-  updateColor: db.prepare(
+  updateColor: db.prepare<[string, number, string]>(
     "UPDATE documents SET color = ?, updated_at = CURRENT_TIMESTAMP WHERE organization_id = ? AND path = ?",
   ),
-  delete: db.prepare(
+  delete: db.prepare<[number, string]>(
     "DELETE FROM documents WHERE organization_id = ? AND path = ?",
   ),
-  deleteByPrefix: db.prepare(
+  deleteByPrefix: db.prepare<[number, string, string]>(
     "DELETE FROM documents WHERE organization_id = ? AND (path = ? OR path LIKE ?)",
   ),
-  search: db.prepare(`
+  search: db.prepare<[number, string], Document>(`
     SELECT d.* FROM documents d
     JOIN documents_fts fts ON d.id = fts.rowid
     WHERE d.organization_id = ? AND documents_fts MATCH ?
     ORDER BY rank
   `),
-  updateContent: db.prepare(`
+  updateContent: db.prepare<[number, string]>(`
     DELETE FROM documents_fts 
     WHERE rowid = (SELECT id FROM documents WHERE organization_id = ? AND path = ?)
   `),
-  insertContent: db.prepare(`
+  insertContent: db.prepare<[number, string, string, number, string, string]>(`
     INSERT INTO documents_fts(rowid, path, title, content)
     VALUES (
       (SELECT id FROM documents WHERE organization_id = ? AND path = ?),

@@ -8,9 +8,10 @@ import {
   sessionQueries,
 } from "../db/index.js";
 import { authMiddleware } from "../middlewares/auth.js";
+import { UserContext } from "../middlewares/auth.types.js";
 
 type Variables = {
-  user: any;
+  user: UserContext;
 };
 
 const organizationsRouter = new Hono<{ Variables: Variables }>();
@@ -22,17 +23,12 @@ organizationsRouter.use("*", authMiddleware);
 // List user's organizations
 organizationsRouter.get("/", async (c) => {
   try {
-    const user = c.get("user") as any;
-    const organizations = organizationQueries.listByUser.all(
-      user.userId,
-    ) as any[];
+    const user = c.get("user");
+    const organizations = organizationQueries.listByUser.all(user.userId);
 
     // Add member role for each organization
     const orgsWithRoles = organizations.map((org) => {
-      const membership = memberQueries.findMembership.get(
-        org.id,
-        user.userId,
-      ) as any;
+      const membership = memberQueries.findMembership.get(org.id, user.userId);
       return {
         id: org.id,
         name: org.name,
@@ -52,19 +48,16 @@ organizationsRouter.get("/", async (c) => {
 // Get organization details
 organizationsRouter.get("/:id", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
 
     // Verify user has access
-    const membership = memberQueries.findMembership.get(
-      orgId,
-      user.userId,
-    ) as any;
+    const membership = memberQueries.findMembership.get(orgId, user.userId);
     if (!membership) {
       return c.json({ error: "Access denied" }, 403);
     }
 
-    const org = organizationQueries.findById.get(orgId) as any;
+    const org = organizationQueries.findById.get(orgId);
     if (!org) {
       return c.json({ error: "Organization not found" }, 404);
     }
@@ -87,20 +80,17 @@ organizationsRouter.get("/:id", async (c) => {
 // Switch active organization
 organizationsRouter.post("/:id/switch", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
 
     // Verify user has access
-    const membership = memberQueries.findMembership.get(
-      orgId,
-      user.userId,
-    ) as any;
+    const membership = memberQueries.findMembership.get(orgId, user.userId);
     if (!membership) {
       return c.json({ error: "Access denied" }, 403);
     }
 
     // Get organization details
-    const org = organizationQueries.findById.get(orgId) as any;
+    const org = organizationQueries.findById.get(orgId);
     if (!org) {
       return c.json({ error: "Organization not found" }, 404);
     }
@@ -122,7 +112,7 @@ organizationsRouter.post("/:id/switch", async (c) => {
     const oldToken = authHeader!.substring(7);
 
     // Get session info
-    const session = sessionQueries.findByToken.get(oldToken) as any;
+    const session = sessionQueries.findByToken.get(oldToken);
     if (session) {
       // Delete old session
       sessionQueries.deleteByToken.run(oldToken);
@@ -160,11 +150,11 @@ organizationsRouter.post("/:id/switch", async (c) => {
 // Update organization (admin only)
 organizationsRouter.put("/:id", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
 
     // Verify user is admin
-    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId);
     if (!isAdmin || isAdmin.count === 0) {
       return c.json({ error: "Admin access required" }, 403);
     }
@@ -190,23 +180,20 @@ organizationsRouter.put("/:id", async (c) => {
 // List organization members (members can view)
 organizationsRouter.get("/:id/members", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
 
     // Verify user has access
-    const membership = memberQueries.findMembership.get(
-      orgId,
-      user.userId,
-    ) as any;
+    const membership = memberQueries.findMembership.get(orgId, user.userId);
     if (!membership) {
       return c.json({ error: "Access denied" }, 403);
     }
 
     // Get organization to know the owner
-    const org = organizationQueries.findById.get(orgId) as any;
+    const org = organizationQueries.findById.get(orgId);
     const ownerId = org?.owner_id;
 
-    const members = memberQueries.listByOrganization.all(orgId) as any[];
+    const members = memberQueries.listByOrganization.all(orgId);
 
     const memberList = members.map((m) => ({
       id: m.user_id,
@@ -227,11 +214,11 @@ organizationsRouter.get("/:id/members", async (c) => {
 // Add member to organization (admin only)
 organizationsRouter.post("/:id/members", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
 
     // Verify user is admin
-    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId);
     if (!isAdmin || isAdmin.count === 0) {
       return c.json({ error: "Admin access required" }, 403);
     }
@@ -247,7 +234,7 @@ organizationsRouter.post("/:id/members", async (c) => {
     }
 
     // Find user by username
-    const targetUser = userQueries.findByUsername.get(username) as any;
+    const targetUser = userQueries.findByUsername.get(username);
     if (!targetUser) {
       return c.json({ error: "User not found" }, 404);
     }
@@ -270,12 +257,12 @@ organizationsRouter.post("/:id/members", async (c) => {
 // Update member role (admin only)
 organizationsRouter.put("/:id/members/:userId", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
     const targetUserId = parseInt(c.req.param("userId"));
 
     // Verify user is admin
-    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId);
     if (!isAdmin || isAdmin.count === 0) {
       return c.json({ error: "Admin access required" }, 403);
     }
@@ -298,12 +285,12 @@ organizationsRouter.put("/:id/members/:userId", async (c) => {
 // Remove member from organization (admin only)
 organizationsRouter.delete("/:id/members/:userId", async (c) => {
   try {
-    const user = c.get("user") as any;
+    const user = c.get("user");
     const orgId = parseInt(c.req.param("id"));
     const targetUserId = parseInt(c.req.param("userId"));
 
     // Verify user is admin
-    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId) as any;
+    const isAdmin = memberQueries.isAdmin.get(orgId, user.userId);
     if (!isAdmin || isAdmin.count === 0) {
       return c.json({ error: "Admin access required" }, 403);
     }
@@ -317,7 +304,7 @@ organizationsRouter.delete("/:id/members/:userId", async (c) => {
     }
 
     // Can't remove the organization owner
-    const org = organizationQueries.findById.get(orgId) as any;
+    const org = organizationQueries.findById.get(orgId);
     if (org && org.owner_id === targetUserId) {
       return c.json({ error: "Cannot remove the organization owner" }, 403);
     }

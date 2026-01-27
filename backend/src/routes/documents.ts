@@ -5,9 +5,10 @@ import crypto from "crypto";
 import { ENCRYPTION_KEY } from "../config.js";
 import { documentQueries } from "../db/index.js";
 import { verifyToken } from "../middlewares/auth.js";
+import { UserContext } from "../middlewares/auth.types.js";
 
 type Variables = {
-  user: any;
+  user: UserContext;
 };
 
 const documentsRouter = new Hono<{ Variables: Variables }>();
@@ -495,7 +496,7 @@ documentsRouter.get("/search", async (c) => {
     }
 
     // Search using SQLite FTS5
-    const results = documentQueries.search.all(organizationId, query) as any[];
+    const results = documentQueries.search.all(organizationId, query);
 
     // Return results with relevant info
     const searchResults = results.map((doc) => ({
