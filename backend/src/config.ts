@@ -12,4 +12,4 @@ if (Buffer.from(ENCRYPTION_KEY, "hex").length !== 32) {
   );
 }
 
-console.log("✓ Configuration loaded successfully");
+console.log("✅ Configuration loaded successfully");
