@@ -15,6 +15,7 @@ export interface SidebarProps {
   onRenameItem?: (oldPath: string, newName: string) => void;
   onExpandFolder: (path: string) => void;
   onSetColor?: (path: string, color: string | null) => void;
+  onOrgSwitch: () => void;
 }
 
 export interface TreeNode extends Document {

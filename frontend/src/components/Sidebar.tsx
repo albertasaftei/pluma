@@ -19,6 +19,7 @@ import {
 import { SettingsMenu } from "./SettingsMenu";
 import { api } from "~/lib/api";
 import AlertDialog from "./AlertDialog";
+import OrganizationSelector from "./OrganizationSelector";
 
 export default function Sidebar(props: SidebarProps) {
   const [showNewDocModal, setShowNewDocModal] = createSignal(false);
@@ -289,6 +290,9 @@ export default function Sidebar(props: SidebarProps) {
             </Button>
             <SettingsMenu />
           </div>
+          <div class="pb-4">
+            <OrganizationSelector onSwitch={props.onOrgSwitch} fullWidth />
+          </div>
 
           <div class="flex gap-2 mb-3">
             <Button
@@ -336,13 +340,9 @@ export default function Sidebar(props: SidebarProps) {
 
         {/* User Info Footer */}
         <Show when={username()}>
-          <div class="p-3 border-t border-neutral-800 bg-neutral-950">
-            <div class="flex items-center gap-2 px-2 py-1.5">
-              <div class="i-carbon-user w-4 h-4 text-neutral-400" />
-              <span class="text-sm text-neutral-300 truncate">
-                {username()}
-              </span>
-            </div>
+          <div class="flex items-center gap-2 p-4 border-t border-neutral-800 bg-neutral-950 space-y-2">
+            <div class="i-carbon-user w-5 h-5 text-neutral-400" />
+            <span class="text-neutral-300 truncate">{username()}</span>
           </div>
         </Show>
       </aside>

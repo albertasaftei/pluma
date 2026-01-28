@@ -12,6 +12,7 @@ interface Organization {
 
 interface OrganizationSelectorProps {
   onSwitch?: () => void;
+  fullWidth?: boolean;
 }
 
 export default function OrganizationSelector(props: OrganizationSelectorProps) {
@@ -75,13 +76,15 @@ export default function OrganizationSelector(props: OrganizationSelectorProps) {
       {/* Selector Button */}
       <button
         onClick={() => setIsOpen(!isOpen())}
-        class="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg transition-colors text-sm cursor-pointer"
+        class={`flex items-center justify-between gap-2 p-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg transition-colors text-sm cursor-pointer ${props.fullWidth ? "w-full" : ""}`}
         title="Switch organization"
       >
-        <div class="i-carbon-enterprise w-4 h-4 text-neutral-400" />
-        <span class="text-neutral-200 max-w-[150px] truncate">
-          {currentOrg()?.name || "Select Organization"}
-        </span>
+        <div class="flex gap-2 items-center">
+          <div class="i-carbon-enterprise w-4 h-4 text-neutral-400" />
+          <span class="text-neutral-200 max-w-[150px] truncate">
+            {currentOrg()?.name || "Select Organization"}
+          </span>
+        </div>
         <div
           class={`i-carbon-chevron-down w-4 h-4 text-neutral-400 transition-transform ${isOpen() ? "rotate-180" : ""}`}
         />

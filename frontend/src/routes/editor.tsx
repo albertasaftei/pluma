@@ -16,6 +16,7 @@ import Dashboard from "~/components/Dashboard";
 import AdminPanel from "~/components/AdminPanel";
 import OrganizationPanel from "~/components/OrganizationPanel";
 import Button from "~/components/Button";
+import { isMobile } from "~/utils/device.utils";
 
 // Lazy load markdown editor with live preview to avoid SSR issues
 const MarkdownEditor = lazy(() => import("~/components/MarkdownEditor"));
@@ -25,7 +26,7 @@ export default function EditorPage() {
   const [currentPath, setCurrentPath] = createSignal<string | null>(null);
   const [currentContent, setCurrentContent] = createSignal("");
   const [loading, setLoading] = createSignal(false);
-  const [sidebarOpen, setSidebarOpen] = createSignal(true);
+  const [sidebarOpen, setSidebarOpen] = createSignal(false);
   const [useLivePreview, setUseLivePreview] = createSignal(true);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(
     new Set(["/"]),
@@ -41,6 +42,11 @@ export default function EditorPage() {
   const [showOrgPanel, setShowOrgPanel] = createSignal(false);
 
   let saveTimeout: NodeJS.Timeout;
+
+  // Set sidebar state based on device size after hydration
+  onMount(() => {
+    setSidebarOpen(!isMobile());
+  });
 
   // Load all documents recursively
   const loadAllDocuments = async () => {
@@ -245,37 +251,45 @@ export default function EditorPage() {
       />
 
       <div class="flex-1 flex overflow-hidden relative">
-        {/* Sidebar */}
+        {/* Mobile overlay backdrop */}
         <Show when={sidebarOpen()}>
-          {/* Mobile overlay backdrop */}
           <div
             class="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-          <div class="fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto">
-            <Sidebar
-              documents={allDocuments()}
-              currentPath={currentPath()}
-              sidebarOpen={sidebarOpen()}
-              setSidebarOpen={setSidebarOpen}
-              saveStatus={saveStatus()}
-              expandedFolders={expandedFolders()}
-              onSelectDocument={(path) => {
-                loadDocument(path);
-                // Close sidebar on mobile after selecting document
-                if (window.innerWidth < 1024) {
-                  setSidebarOpen(false);
-                }
-              }}
-              onCreateDocument={createNewDocument}
-              onCreateFolder={createNewFolder}
-              onDeleteItem={deleteItem}
-              onRenameItem={renameItem}
-              onExpandFolder={toggleExpandFolder}
-              onSetColor={setItemColor}
-            />
-          </div>
         </Show>
+
+        {/* Sidebar - hidden on mobile by default, visible on desktop via CSS */}
+        <div
+          class="fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto transition-transform duration-300 lg:block"
+          classList={{
+            hidden: !sidebarOpen(),
+            block: sidebarOpen(),
+          }}
+        >
+          <Sidebar
+            documents={allDocuments()}
+            currentPath={currentPath()}
+            sidebarOpen={sidebarOpen()}
+            setSidebarOpen={setSidebarOpen}
+            saveStatus={saveStatus()}
+            expandedFolders={expandedFolders()}
+            onSelectDocument={(path) => {
+              loadDocument(path);
+              // Close sidebar on mobile after selecting document
+              if (window.innerWidth < 1024) {
+                setSidebarOpen(false);
+              }
+            }}
+            onCreateDocument={createNewDocument}
+            onCreateFolder={createNewFolder}
+            onDeleteItem={deleteItem}
+            onRenameItem={renameItem}
+            onExpandFolder={toggleExpandFolder}
+            onSetColor={setItemColor}
+            onOrgSwitch={() => loadAllDocuments()}
+          />
+        </div>
 
         {/* Main Editor Area */}
         <div class="flex-1 flex flex-col overflow-hidden">

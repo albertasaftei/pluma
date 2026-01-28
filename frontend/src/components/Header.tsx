@@ -1,8 +1,9 @@
 import { Show, createSignal, onMount } from "solid-js";
 import Button from "./Button";
 import Logo from "./Logo";
-import OrganizationSelector from "./OrganizationSelector";
+import Popover, { PopoverItem } from "./Popover";
 import { api } from "~/lib/api";
+import { PopoverItemProps } from "~/types/Popover.types";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -17,6 +18,7 @@ export default function Header(props: HeaderProps) {
   const [mounted, setMounted] = createSignal(false);
   const [isAdmin, setIsAdmin] = createSignal(false);
   const [isOrgAdmin, setIsOrgAdmin] = createSignal(false);
+  const [menuOpen, setMenuOpen] = createSignal(false);
 
   onMount(() => {
     setMounted(true);
@@ -27,6 +29,43 @@ export default function Header(props: HeaderProps) {
   const handleLogout = () => {
     api.clearToken();
     window.location.href = "/";
+  };
+
+  const menuItems = (): PopoverItemProps[] => {
+    const items: PopoverItemProps[] = [];
+
+    if (mounted() && isOrgAdmin()) {
+      items.push({
+        icon: "i-carbon-settings",
+        label: "Organization",
+        onClick: () => {
+          props.onOpenOrgPanel();
+          setMenuOpen(false);
+        },
+      });
+    }
+
+    if (mounted() && isAdmin()) {
+      items.push({
+        icon: "i-carbon-user-admin",
+        label: "Admin Panel",
+        onClick: () => {
+          props.onOpenAdminPanel();
+          setMenuOpen(false);
+        },
+      });
+    }
+
+    items.push({
+      icon: "i-carbon-logout",
+      label: "Logout",
+      onClick: () => {
+        handleLogout();
+        setMenuOpen(false);
+      },
+    });
+
+    return items;
   };
   return (
     <header class="h-14 border-b border-neutral-800 flex items-center justify-between px-2 sm:px-4 bg-neutral-950">
@@ -56,38 +95,67 @@ export default function Header(props: HeaderProps) {
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
-        {/* Organization Selector */}
-        <Show when={mounted()}>
-          <OrganizationSelector onSwitch={props.onOrgSwitch} />
-        </Show>
+        {/* Desktop: Show individual icons */}
+        <div class="hidden md:flex items-center gap-2">
+          {/* Organization Settings (for org admins) */}
+          <Show when={mounted() && isOrgAdmin()}>
+            <Button
+              onClick={props.onOpenOrgPanel}
+              variant="icon"
+              size="md"
+              title="Organization Settings"
+            >
+              <div class="i-carbon-settings w-5 h-5" />
+            </Button>
+          </Show>
 
-        {/* Organization Settings (for org admins) */}
-        <Show when={mounted() && isOrgAdmin()}>
+          {/* Global Admin Panel (for global admin only) */}
+          <Show when={mounted() && isAdmin()}>
+            <Button
+              onClick={props.onOpenAdminPanel}
+              variant="icon"
+              size="md"
+              title="Admin Panel"
+            >
+              <div class="i-carbon-user-admin w-5 h-5" />
+            </Button>
+          </Show>
+
           <Button
-            onClick={props.onOpenOrgPanel}
+            onClick={handleLogout}
             variant="icon"
             size="md"
-            title="Organization Settings"
+            title="Logout"
           >
-            <div class="i-carbon-settings w-5 h-5" />
+            <div class="i-carbon-logout w-5 h-5" />
           </Button>
-        </Show>
+        </div>
 
-        {/* Global Admin Panel (for global admin only) */}
-        <Show when={mounted() && isAdmin()}>
-          <Button
-            onClick={props.onOpenAdminPanel}
-            variant="icon"
-            size="md"
-            title="Admin Panel"
+        {/* Mobile: Hamburger menu */}
+        <div class="md:hidden">
+          <Popover
+            isOpen={menuOpen()}
+            onClose={() => setMenuOpen(false)}
+            trigger={
+              <Button
+                variant="icon"
+                size="md"
+                title="Menu"
+                onClick={() => setMenuOpen(!menuOpen())}
+              >
+                <div class="i-carbon-overflow-menu-vertical w-5 h-5" />
+              </Button>
+            }
           >
-            <div class="i-carbon-user-admin w-5 h-5" />
-          </Button>
-        </Show>
-
-        <Button onClick={handleLogout} variant="icon" size="md" title="Logout">
-          <div class="i-carbon-logout w-5 h-5" />
-        </Button>
+            {menuItems().map((item) => (
+              <PopoverItem
+                icon={item.icon}
+                label={item.label}
+                onClick={item.onClick}
+              />
+            ))}
+          </Popover>
+        </div>
       </div>
     </header>
   );
