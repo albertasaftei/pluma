@@ -175,7 +175,8 @@ export default function Home() {
               <Button
                 variant="primary"
                 type="submit"
-                class="w-full py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors"
+                class="justify-center"
+                fullWidth
               >
                 {isSetup() ? "Complete Setup" : "Login"}
               </Button>

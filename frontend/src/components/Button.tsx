@@ -30,7 +30,7 @@ export default function Button(props: ButtonProps) {
   const size = () => local.size || "md";
 
   const baseClasses =
-    "flex items-center justify-center gap-2 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 hover:scale-[1.02]";
+    "flex items-center gap-2 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 hover:scale-[1.02]";
 
   const variantClasses = () => {
     const v = variant();
@@ -39,8 +39,8 @@ export default function Button(props: ButtonProps) {
         ? "bg-primary hover:bg-primary-dark text-white"
         : "bg-primary hover:bg-primary-dark text-white",
       secondary: local.active
-        ? "bg-neutral-700 text-neutral-100"
-        : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200",
+        ? "bg-neutral-700 text-neutral-100 border border-neutral-600"
+        : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700",
       ghost: local.active
         ? "bg-neutral-700 text-neutral-100"
         : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800",
@@ -67,10 +67,12 @@ export default function Button(props: ButtonProps) {
     return classes[s];
   };
 
-  const widthClass = () => (local.fullWidth ? "flex-1" : "");
+  const widthClass = () => (local.fullWidth ? "w-full" : "");
 
-  const classes = () =>
-    `${baseClasses} ${variantClasses()} ${sizeClasses()} ${widthClass()} ${local.class || ""}`;
+  const classes = () => {
+    const defaultClasses = `${baseClasses} ${variantClasses()} ${sizeClasses()} ${widthClass()}`;
+    return local.class ? `${defaultClasses} ${local.class}` : defaultClasses;
+  };
 
   return (
     <button class={classes()} {...others}>

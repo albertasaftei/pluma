@@ -16,12 +16,13 @@ import {
   filterTreeNodes,
   formatDate,
 } from "~/utils/sidebar.utils";
-import { SettingsMenu } from "./SettingsMenu";
 import { api } from "~/lib/api";
+import { useNavigate } from "@solidjs/router";
 import AlertDialog from "./AlertDialog";
 import OrganizationSelector from "./OrganizationSelector";
 
 export default function Sidebar(props: SidebarProps) {
+  const navigate = useNavigate();
   const [showNewDocModal, setShowNewDocModal] = createSignal(false);
   const [showNewFolderModal, setShowNewFolderModal] = createSignal(false);
   const [showRenameModal, setShowRenameModal] = createSignal(false);
@@ -289,17 +290,6 @@ export default function Sidebar(props: SidebarProps) {
       <aside class="w-80 sm:w-96 h-full border-r border-neutral-800 bg-neutral-950 flex flex-col">
         {/* Sidebar Header */}
         <div class="p-4 sm:p-4 border-b border-neutral-800">
-          <div class="flex items-center justify-between mb-3">
-            <Button
-              onClick={() => props.setSidebarOpen(false)}
-              variant="icon"
-              size="md"
-              title="Close sidebar"
-            >
-              <div class="i-carbon-side-panel-close w-5 h-5" />
-            </Button>
-            <SettingsMenu />
-          </div>
           <div class="pb-4">
             <OrganizationSelector onSwitch={props.onOrgSwitch} fullWidth />
           </div>
@@ -313,6 +303,7 @@ export default function Sidebar(props: SidebarProps) {
               variant="primary"
               size="md"
               fullWidth
+              class="justify-center"
             >
               <div class="i-carbon-document-add w-4 h-4" />
               New file
@@ -349,30 +340,26 @@ export default function Sidebar(props: SidebarProps) {
         </div>
 
         {/* Archive Button */}
-        <div class="p-4">
+        <div class="p-4 space-y-2">
           <Button
-            onClick={props.onOpenArchive}
+            onClick={() => navigate("/archive")}
             variant="ghost"
             size="md"
             fullWidth
-            class="justify-start"
           >
             <div class="i-carbon-archive w-4 h-4" />
             <span class="ml-2">View Archive</span>
           </Button>
+          <Button
+            onClick={() => navigate("/settings")}
+            variant="ghost"
+            size="md"
+            fullWidth
+          >
+            <div class="i-carbon-settings w-4 h-4" />
+            <span class="ml-2">Settings</span>
+          </Button>
         </div>
-
-        {/* User Info Footer */}
-        <Show when={username()}>
-          <div class="p-4 border-t border-neutral-800 bg-neutral-950 space-y-2">
-            <div class="flex items-center gap-2">
-              <div class="i-carbon-user w-4 h-4 text-neutral-400" />
-              <span class="text-sm text-neutral-300 truncate">
-                {username()}
-              </span>
-            </div>
-          </div>
-        </Show>
       </aside>
 
       {/* New Document Modal */}

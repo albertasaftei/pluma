@@ -182,6 +182,7 @@ export class ApiClient {
 
   getUsername(): string | null {
     const decoded = this.decodeToken();
+    console.log({ decoded });
     return decoded?.username ?? null;
   }
 
