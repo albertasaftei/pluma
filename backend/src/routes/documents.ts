@@ -4,7 +4,7 @@ import path from "path";
 import crypto from "crypto";
 import { ENCRYPTION_KEY } from "../config.js";
 import db, { documentQueries } from "../db/index.js";
-import { verifyToken } from "../middlewares/auth.js";
+import { authMiddleware } from "../middlewares/auth.js";
 import { UserJWTPayload } from "../middlewares/auth.types.js";
 
 type Variables = {
@@ -17,22 +17,7 @@ const DOCUMENTS_PATH = process.env.DOCUMENTS_PATH || "./documents";
 const encryptionKeyBuffer = Buffer.from(ENCRYPTION_KEY, "hex");
 
 // Auth middleware
-documentsRouter.use("*", async (c, next) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const token = authHeader.substring(7);
-  const payload = await verifyToken(token);
-
-  if (!payload) {
-    return c.json({ error: "Invalid token" }, 401);
-  }
-
-  c.set("user", payload);
-  await next();
-});
+documentsRouter.use("*", authMiddleware);
 
 // Get organization-specific documents path
 function getOrgDocumentsPath(organizationId: number): string {
