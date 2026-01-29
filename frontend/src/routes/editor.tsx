@@ -243,40 +243,44 @@ export default function EditorPage() {
         </Show>
 
         {/* Sidebar - hidden on mobile by default, visible on desktop via CSS */}
-        <div
-          class="fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto transition-transform duration-300 lg:block"
-          classList={{
-            hidden: !sidebarOpen(),
-            block: sidebarOpen(),
+        <Sidebar
+          documents={allDocuments()}
+          currentPath={currentPath()}
+          sidebarOpen={sidebarOpen()}
+          setSidebarOpen={setSidebarOpen}
+          saveStatus={saveStatus()}
+          expandedFolders={expandedFolders()}
+          onSelectDocument={(path) => {
+            loadDocument(path);
+            // Close sidebar on mobile after selecting document
+            if (window.innerWidth < 1024) {
+              setSidebarOpen(false);
+            }
           }}
-        >
-          <Sidebar
-            documents={allDocuments()}
-            currentPath={currentPath()}
-            sidebarOpen={sidebarOpen()}
-            setSidebarOpen={setSidebarOpen}
-            saveStatus={saveStatus()}
-            expandedFolders={expandedFolders()}
-            onSelectDocument={(path) => {
-              loadDocument(path);
-              // Close sidebar on mobile after selecting document
-              if (window.innerWidth < 1024) {
-                setSidebarOpen(false);
-              }
-            }}
-            onCreateDocument={createNewDocument}
-            onCreateFolder={createNewFolder}
-            onDeleteItem={deleteItem}
-            onRenameItem={renameItem}
-            onExpandFolder={toggleExpandFolder}
-            onSetColor={setItemColor}
-            onOrgSwitch={() => loadAllDocuments()}
-            onArchiveItem={archiveItem}
-          />
-        </div>
+          onCreateDocument={createNewDocument}
+          onCreateFolder={createNewFolder}
+          onDeleteItem={deleteItem}
+          onRenameItem={renameItem}
+          onExpandFolder={toggleExpandFolder}
+          onSetColor={setItemColor}
+          onOrgSwitch={() => loadAllDocuments()}
+          onArchiveItem={archiveItem}
+        />
 
         {/* Main Editor Area */}
         <div class="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile header with menu toggle */}
+          <div class="lg:hidden border-b border-neutral-800 bg-neutral-950 p-4">
+            <Button
+              onClick={() => setSidebarOpen(true)}
+              variant="ghost"
+              size="md"
+              class="lg:hidden"
+            >
+              <div class="i-carbon-menu w-5 h-5" />
+            </Button>
+          </div>
+
           {/* Current File Breadcrumb */}
           <Show when={currentPath()}>
             <div class="px-4 py-2 border-b border-neutral-800 bg-neutral-950">

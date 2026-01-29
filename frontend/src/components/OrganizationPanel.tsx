@@ -368,37 +368,39 @@ export default function OrganizationPanel(props: OrganizationPanelProps) {
         onCancel={() => setRemoveDialog({ isOpen: false, member: null })}
       />
 
-      <Show when={props.inline}>
-        {/* Inline mode - just render content */}
-        <div class="flex-1 overflow-auto p-6">
-          <h2 class="text-xl font-bold text-neutral-100 mb-2">
-            {currentOrg()?.name || "Organization"}
-          </h2>
-          {renderContent()}
-        </div>
-      </Show>
+      <div class="max-w-4xl mx-auto py-6">
+        <Show when={props.inline}>
+          {/* Inline mode - just render content */}
+          <div class="flex-1 overflow-auto">
+            <h2 class="text-xl font-bold text-neutral-100 mb-2">
+              {currentOrg()?.name || "Organization"}
+            </h2>
+            {renderContent()}
+          </div>
+        </Show>
 
-      <Show when={!props.inline}>
-        {/* Modal mode - wrap in AlertDialog */}
-        <AlertDialog
-          isOpen={props.isOpen}
-          title={currentOrg()?.name || "Organization"}
-          showActions={false}
-          showCloseIcon
-          onCancel={props.onClose}
-        >
-          {renderContent()}
-        </AlertDialog>
-      </Show>
+        <Show when={!props.inline}>
+          {/* Modal mode - wrap in AlertDialog */}
+          <AlertDialog
+            isOpen={props.isOpen}
+            title={currentOrg()?.name || "Organization"}
+            showActions={false}
+            showCloseIcon
+            onCancel={props.onClose}
+          >
+            {renderContent()}
+          </AlertDialog>
+        </Show>
 
-      {/* Toast Notifications */}
-      <Show when={toast()}>
-        <Toast
-          message={toast()!.message}
-          type={toast()!.type}
-          onClose={() => setToast(null)}
-        />
-      </Show>
+        {/* Toast Notifications */}
+        <Show when={toast()}>
+          <Toast
+            message={toast()!.message}
+            type={toast()!.type}
+            onClose={() => setToast(null)}
+          />
+        </Show>
+      </div>
     </>
   );
 }

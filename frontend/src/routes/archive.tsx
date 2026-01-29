@@ -154,7 +154,7 @@ export default function ArchivePage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog
-        isOpen={deleteConfirm() !== null}
+        isOpen={!!deleteConfirm()}
         title="Delete Permanently?"
         onConfirm={() => deleteConfirm() && handleDelete(deleteConfirm()!)}
         onCancel={() => setDeleteConfirm(null)}

@@ -15,29 +15,36 @@ interface SettingsSidebarProps {
   onLogout: () => void;
   isAdmin: boolean;
   isOrgAdmin: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 export default function SettingsSidebar(props: SettingsSidebarProps) {
   return (
-    <aside class="w-64 border-r border-neutral-800 bg-neutral-950 flex flex-col">
-      <div class="p-4 border-b border-neutral-800">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-white">Settings</h2>
-          <Button
-            onClick={props.onClose}
-            variant="icon"
-            size="md"
-            title="Close settings"
-          >
-            <div class="i-carbon-close w-5 h-5" />
-          </Button>
-        </div>
+    <aside
+      class="w-80 h-full border-r border-neutral-800 bg-neutral-950 flex flex-col fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto transition-transform duration-300 ease-in-out"
+      classList={{
+        "-translate-x-full lg:translate-x-0": !props.isOpen,
+        "translate-x-0": props.isOpen,
+      }}
+    >
+      <div class="flex items-center justify-between mb-4 p-4 border-b border-neutral-800">
+        <h2 class="text-lg font-semibold text-white">Settings</h2>
+        <Button
+          onClick={props.onToggle}
+          variant="icon"
+          size="md"
+          title="Close sidebar"
+          class="lg:hidden"
+        >
+          <div class="i-carbon-close w-5 h-5" />
+        </Button>
       </div>
 
       <nav class="flex flex-col flex-1 p-2 gap-1">
         <Button
           onClick={() => props.onSectionChange("account")}
-          variant={props.activeSection === "account" ? "primary" : "ghost"}
+          variant={props.activeSection === "account" ? "secondary" : "ghost"}
           size="md"
           fullWidth
         >
@@ -48,7 +55,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
         <Button
           onClick={() => props.onSectionChange("import-export")}
           variant={
-            props.activeSection === "import-export" ? "primary" : "ghost"
+            props.activeSection === "import-export" ? "secondary" : "ghost"
           }
           size="md"
           fullWidth
@@ -61,7 +68,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
           <Button
             onClick={() => props.onSectionChange("organization")}
             variant={
-              props.activeSection === "organization" ? "primary" : "ghost"
+              props.activeSection === "organization" ? "secondary" : "ghost"
             }
             size="md"
             fullWidth
@@ -74,7 +81,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
         <Show when={props.isAdmin}>
           <Button
             onClick={() => props.onSectionChange("admin")}
-            variant={props.activeSection === "admin" ? "primary" : "ghost"}
+            variant={props.activeSection === "admin" ? "secondary" : "ghost"}
             size="md"
             fullWidth
           >

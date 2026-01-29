@@ -69,6 +69,73 @@ export default function ImportExport() {
 
   return (
     <>
+      <div class="space-y-4">
+        <div class="bg-neutral-800 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-white mb-2">
+            Export Documents
+          </h3>
+          <p class="text-neutral-400 mb-4">
+            Download all your documents as a compressed archive.
+          </p>
+          <Button
+            onClick={handleExport}
+            variant="primary"
+            size="md"
+            disabled={isExporting()}
+          >
+            <Show
+              when={!isExporting()}
+              fallback={
+                <>
+                  <div class="i-carbon-in-progress animate-spin w-4 h-4" />
+                  <span>Exporting...</span>
+                </>
+              }
+            >
+              <div class="i-carbon-download w-4 h-4" />
+              <span class="ml-2">Export</span>
+            </Show>
+          </Button>
+        </div>
+
+        <div class="bg-neutral-800 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-white mb-2">
+            Import Documents
+          </h3>
+          <p class="text-neutral-400 mb-4">
+            Upload a previously exported archive to restore your documents.
+          </p>
+          <Button
+            onClick={handleImportClick}
+            variant="secondary"
+            size="md"
+            disabled={isImporting()}
+          >
+            <Show
+              when={!isImporting()}
+              fallback={
+                <>
+                  <div class="i-carbon-in-progress animate-spin w-4 h-4" />
+                  <span class="ml-2">Importing...</span>
+                </>
+              }
+            >
+              <div class="i-carbon-upload w-4 h-4" />
+              <span class="ml-2">Import</span>
+            </Show>
+          </Button>
+        </div>
+      </div>
+
+      {/* Hidden file input */}
+      <input
+        id="settings-import-file-input"
+        type="file"
+        accept="application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.tar.gz,.tgz,.gz"
+        onChange={handleImportFile}
+        class="hidden"
+      />
+
       {/* Import Confirmation Dialog */}
       <AlertDialog
         isOpen={importDialog().isOpen}
@@ -81,76 +148,6 @@ export default function ImportExport() {
           name will be overwritten. Continue?
         </p>
       </AlertDialog>
-
-      <div class="p-8 max-w-2xl mx-auto">
-        <h2 class="text-2xl font-bold text-white mb-6">Import / Export</h2>
-        <div class="space-y-4">
-          <div class="bg-neutral-800 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-white mb-2">
-              Export Documents
-            </h3>
-            <p class="text-neutral-400 mb-4">
-              Download all your documents as a compressed archive.
-            </p>
-            <Button
-              onClick={handleExport}
-              variant="primary"
-              size="md"
-              disabled={isExporting()}
-            >
-              <Show
-                when={!isExporting()}
-                fallback={
-                  <>
-                    <div class="i-carbon-in-progress animate-spin w-4 h-4" />
-                    <span>Exporting...</span>
-                  </>
-                }
-              >
-                <div class="i-carbon-download w-4 h-4" />
-                <span class="ml-2">Export</span>
-              </Show>
-            </Button>
-          </div>
-
-          <div class="bg-neutral-800 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-white mb-2">
-              Import Documents
-            </h3>
-            <p class="text-neutral-400 mb-4">
-              Upload a previously exported archive to restore your documents.
-            </p>
-            <Button
-              onClick={handleImportClick}
-              variant="secondary"
-              size="md"
-              disabled={isImporting()}
-            >
-              <Show
-                when={!isImporting()}
-                fallback={
-                  <>
-                    <div class="i-carbon-in-progress animate-spin w-4 h-4" />
-                    <span class="ml-2">Importing...</span>
-                  </>
-                }
-              >
-                <div class="i-carbon-upload w-4 h-4" />
-                <span class="ml-2">Import</span>
-              </Show>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Hidden file input */}
-      <input
-        id="settings-import-file-input"
-        type="file"
-        accept="application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.tar.gz,.tgz,.gz"
-        onChange={handleImportFile}
-        class="hidden"
-      />
     </>
   );
 }

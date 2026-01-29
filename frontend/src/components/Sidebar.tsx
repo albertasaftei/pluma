@@ -1,11 +1,4 @@
-import {
-  createSignal,
-  For,
-  Show,
-  createMemo,
-  createEffect,
-  onMount,
-} from "solid-js";
+import { createSignal, For, Show, createMemo, createEffect } from "solid-js";
 import Popover, { PopoverItem } from "./Popover";
 import ColorPicker from "./ColorPicker";
 import Button from "./Button";
@@ -16,7 +9,6 @@ import {
   filterTreeNodes,
   formatDate,
 } from "~/utils/sidebar.utils";
-import { api } from "~/lib/api";
 import { useNavigate } from "@solidjs/router";
 import AlertDialog from "./AlertDialog";
 import OrganizationSelector from "./OrganizationSelector";
@@ -31,13 +23,6 @@ export default function Sidebar(props: SidebarProps) {
   const [itemToRename, setItemToRename] = createSignal<string | null>(null);
   const [openMenuPath, setOpenMenuPath] = createSignal<string | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [username, setUsername] = createSignal<string | null>(null);
-
-  onMount(() => {
-    // Get username from JWT token
-    const currentUsername = api.getUsername();
-    setUsername(currentUsername);
-  });
 
   let newDocInputRef: HTMLInputElement | undefined;
   let newFolderInputRef: HTMLInputElement | undefined;
@@ -287,9 +272,26 @@ export default function Sidebar(props: SidebarProps) {
 
   return (
     <>
-      <aside class="w-80 sm:w-96 h-full border-r border-neutral-800 bg-neutral-950 flex flex-col">
+      <aside
+        class="w-80 h-full border-r border-neutral-800 bg-neutral-950 flex flex-col fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto transition-transform duration-300 ease-in-out"
+        classList={{
+          "-translate-x-full lg:translate-x-0": !props.sidebarOpen,
+          "translate-x-0": props.sidebarOpen,
+        }}
+      >
         {/* Sidebar Header */}
         <div class="p-4 sm:p-4 border-b border-neutral-800">
+          <div class="w-full flex items-center justify-end pb-4">
+            <Button
+              onClick={() => props.setSidebarOpen(false)}
+              variant="icon"
+              size="md"
+              title="Close sidebar"
+              class="lg:hidden"
+            >
+              <div class="i-carbon-close w-5 h-5" />
+            </Button>
+          </div>
           <div class="pb-4">
             <OrganizationSelector onSwitch={props.onOrgSwitch} fullWidth />
           </div>

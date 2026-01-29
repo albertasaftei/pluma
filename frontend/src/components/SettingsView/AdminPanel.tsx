@@ -119,7 +119,7 @@ export default function AdminPanel(props: AdminPanelProps) {
           size="md"
         >
           <div class="i-carbon-user-follow w-5 h-5 mr-2" />
-          Add User
+          Create User
         </Button>
       </div>
 
@@ -293,52 +293,53 @@ export default function AdminPanel(props: AdminPanelProps) {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, user: null })}
       />
-
-      <Show when={props.inline}>
-        {/* Inline mode - just render content */}
-        <div class="flex-1 overflow-auto p-6">
-          <h2 class="text-xl font-bold text-neutral-100 mb-2">
-            Global User Management
-          </h2>
-          <p class="text-sm text-neutral-400 mb-6">
-            Manage global users and access
-          </p>
-          {renderContent()}
-        </div>
-      </Show>
-
-      <Show when={!props.inline && props.isOpen}>
-        {/* Modal mode - full modal panel */}
-        <div
-          class="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center p-4"
-          onClick={props.onClose}
-        >
-          <div
-            class="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div class="px-6 py-4 border-b border-neutral-700 flex items-center justify-between">
-              <div>
-                <h2 class="text-2xl font-bold text-neutral-100">
-                  Global User Management
-                </h2>
-                <p class="text-sm text-neutral-400 mt-1">
-                  Manage global users and access
-                </p>
-              </div>
-              <Button
-                onClick={props.onClose}
-                variant="icon"
-                size="md"
-                title="Close"
-              >
-                <div class="i-carbon-close w-5 h-5" />
-              </Button>
-            </div>
-            <div class="flex-1 overflow-auto p-6">{renderContent()}</div>
+      <div class="max-w-4xl mx-auto py-6">
+        <Show when={props.inline}>
+          {/* Inline mode - just render content */}
+          <div class="flex-1 overflow-auto">
+            <h2 class="text-xl font-bold text-neutral-100 mb-2">
+              Global User Management
+            </h2>
+            <p class="text-sm text-neutral-400 mb-6">
+              Manage global users and access
+            </p>
+            {renderContent()}
           </div>
-        </div>
-      </Show>
+        </Show>
+
+        <Show when={!props.inline && props.isOpen}>
+          {/* Modal mode - full modal panel */}
+          <div
+            class="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center p-4"
+            onClick={props.onClose}
+          >
+            <div
+              class="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div class="px-6 py-4 border-b border-neutral-700 flex items-center justify-between">
+                <div>
+                  <h2 class="text-2xl font-bold text-neutral-100">
+                    Global User Management
+                  </h2>
+                  <p class="text-sm text-neutral-400 mt-1">
+                    Manage global users and access
+                  </p>
+                </div>
+                <Button
+                  onClick={props.onClose}
+                  variant="icon"
+                  size="md"
+                  title="Close"
+                >
+                  <div class="i-carbon-close w-5 h-5" />
+                </Button>
+              </div>
+              <div class="flex-1 overflow-auto p-6">{renderContent()}</div>
+            </div>
+          </div>
+        </Show>
+      </div>
     </>
   );
 }
