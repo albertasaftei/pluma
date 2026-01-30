@@ -22,7 +22,14 @@ export default function ArchivePage() {
     }
   };
 
-  onMount(() => {
+  onMount(async () => {
+    // Validate session first
+    const isValid = await api.validateSession();
+    if (!isValid) {
+      navigate("/");
+      return;
+    }
+
     loadArchived();
   });
 

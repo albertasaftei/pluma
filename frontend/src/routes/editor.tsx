@@ -6,6 +6,7 @@ import {
   Suspense,
   onMount,
 } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { api, type Document } from "~/lib/api";
 import Editor from "~/components/Editor";
 import Sidebar from "~/components/Sidebar";
@@ -18,6 +19,7 @@ import { isMobile } from "~/utils/device.utils";
 const MarkdownEditor = lazy(() => import("~/components/MarkdownEditor"));
 
 export default function EditorPage() {
+  const navigate = useNavigate();
   const [allDocuments, setAllDocuments] = createSignal<Document[]>([]);
   const [currentPath, setCurrentPath] = createSignal<string | null>(null);
   const [currentContent, setCurrentContent] = createSignal("");
@@ -37,9 +39,16 @@ export default function EditorPage() {
 
   let saveTimeout: NodeJS.Timeout;
 
-  // Set sidebar state based on device size after hydration
-  onMount(() => {
+  // Validate session and set sidebar state based on device size after hydration
+  onMount(async () => {
     setSidebarOpen(!isMobile());
+
+    // Validate session on mount
+    const isValid = await api.validateSession();
+    if (!isValid) {
+      // Session is invalid or expired, redirect to login
+      navigate("/");
+    }
   });
 
   // Load all documents recursively

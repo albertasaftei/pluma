@@ -21,9 +21,13 @@ export default function Home() {
       setNeedsSetup(result.needsSetup);
       setIsSetup(result.needsSetup);
 
-      // If already has token and setup is complete, go to editor
+      // If setup is complete and has token, validate session
       if (!result.needsSetup && localStorage.getItem("pluma_token")) {
-        navigate("/editor");
+        const isValid = await api.validateSession();
+        if (isValid) {
+          navigate("/editor");
+        }
+        // If invalid, token was cleared by validateSession()
       }
     } catch (err) {
       console.error("Failed to check setup:", err);

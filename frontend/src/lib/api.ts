@@ -116,6 +116,20 @@ export class ApiClient {
     return this.request<{ needsSetup: boolean }>("/api/auth/check-setup");
   }
 
+  async validateSession(): Promise<boolean> {
+    if (!this.token) return false;
+    try {
+      await this.request<{ valid: boolean; userId: number; username: string }>(
+        "/api/auth/validate",
+      );
+      return true;
+    } catch {
+      // Token is invalid or expired, clear it
+      this.clearToken();
+      return false;
+    }
+  }
+
   async setup(username: string, email: string, password: string) {
     return this.request("/api/auth/setup", {
       method: "POST",

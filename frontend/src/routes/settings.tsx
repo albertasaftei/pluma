@@ -20,6 +20,13 @@ export default function SettingsPage() {
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
 
   onMount(async () => {
+    // Validate session first
+    const isValid = await api.validateSession();
+    if (!isValid) {
+      navigate("/");
+      return;
+    }
+
     setIsAdmin(api.isAdmin());
     // Fetch org admin status from server for security
     const orgAdminStatus = await api.isOrgAdmin();

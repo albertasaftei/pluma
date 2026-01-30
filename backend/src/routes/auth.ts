@@ -10,6 +10,7 @@ import {
 } from "../db/index.js";
 import crypto from "crypto";
 import { UserJWTPayload } from "../middlewares/auth.types.js";
+import { authMiddleware } from "../middlewares/auth.js";
 
 type Variables = {
   user: UserJWTPayload;
@@ -18,6 +19,20 @@ type Variables = {
 const authRouter = new Hono<{ Variables: Variables }>();
 
 const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
+
+// Validate session - Check if current token is valid
+authRouter.get("/validate", authMiddleware, async (c) => {
+  try {
+    const user = c.get("user");
+    return c.json({
+      valid: true,
+      userId: user.userId,
+      username: user.username,
+    });
+  } catch (error) {
+    return c.json({ valid: false }, 401);
+  }
+});
 
 // Setup - Create initial user (only if no users exist)
 authRouter.post("/setup", async (c) => {
