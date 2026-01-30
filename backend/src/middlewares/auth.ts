@@ -2,7 +2,7 @@ import { jwtVerify } from "jose";
 import { JWT_SECRET } from "../config.js";
 import { sessionQueries } from "../db/index.js";
 import { UserJWTPayload } from "./auth.types.js";
-import type { Context, Next } from "hono";
+import { bearerAuth } from "hono/bearer-auth";
 
 const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
 
@@ -23,7 +23,6 @@ export async function verifyToken(
       return null;
     }
 
-    // Verify JWT
     const { payload }: { payload: UserJWTPayload } = await jwtVerify(
       token,
       jwtSecretKey,
@@ -34,38 +33,28 @@ export async function verifyToken(
   }
 }
 
-// Auth middleware - requires valid token
-export const authMiddleware = async (c: Context, next: Next) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+export const authMiddleware = bearerAuth({
+  verifyToken: async (token, c) => {
+    const payload = await verifyToken(token);
 
-  const token = authHeader.substring(7);
-  const payload = await verifyToken(token);
+    if (!payload) {
+      return false;
+    }
 
-  if (!payload) {
-    return c.json({ error: "Invalid or expired token" }, 401);
-  }
+    c.set("user", payload);
+    return true;
+  },
+});
 
-  c.set("user", payload);
-  await next();
-};
+export const adminMiddleware = bearerAuth({
+  verifyToken: async (token, c) => {
+    const payload = await verifyToken(token);
 
-// Admin middleware - requires valid token AND admin role
-export const adminMiddleware = async (c: Context, next: Next) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+    if (!payload || !payload.isAdmin) {
+      return false;
+    }
 
-  const token = authHeader.substring(7);
-  const payload = await verifyToken(token);
-
-  if (!payload || !payload.isAdmin) {
-    return c.json({ error: "Admin access required" }, 403);
-  }
-
-  c.set("user", payload);
-  await next();
-};
+    c.set("user", payload);
+    return true;
+  },
+});
