@@ -21,6 +21,8 @@ export default function MarkdownEditor(props: EditorProps) {
       const { prism } = await import("@milkdown/plugin-prism");
       const { block } = await import("@milkdown/plugin-block");
       const { indent } = await import("@milkdown/plugin-indent");
+      const { upload } = await import("@milkdown/plugin-upload");
+      const { math } = await import("@milkdown/plugin-math");
 
       await import("@milkdown/theme-nord/style.css");
       await import("../styles/milkdown-theme.css");
@@ -43,6 +45,8 @@ export default function MarkdownEditor(props: EditorProps) {
         .use(prism)
         .use(block)
         .use(indent)
+        .use(upload)
+        .use(math)
         .create();
 
       // Apply dark theme class after creation
