@@ -238,7 +238,7 @@ export default function EditorPage() {
       <AlertDialog
         isOpen={deleteDialog().isOpen}
         title="Delete Item"
-        message="Are you sure you want to delete this item? This action cannot be undone."
+        message="Are you sure you want to delete this item?"
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"

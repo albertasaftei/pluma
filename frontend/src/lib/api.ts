@@ -36,6 +36,7 @@ export interface Document {
   size: number;
   color?: string;
   archived_at?: string;
+  deleted_at?: string;
 }
 
 export class ApiClient {
@@ -464,6 +465,24 @@ export class ApiClient {
 
   async permanentlyDeleteDocument(path: string) {
     return this.request("/api/documents/archive/delete", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    });
+  }
+
+  async listDeletedDocuments() {
+    return this.request<{ items: Document[] }>("/api/documents/deleted");
+  }
+
+  async restoreDeletedDocument(path: string) {
+    return this.request("/api/documents/deleted/restore", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    });
+  }
+
+  async permanentlyDeleteFromTrash(path: string) {
+    return this.request("/api/documents/deleted/permanent", {
       method: "POST",
       body: JSON.stringify({ path }),
     });

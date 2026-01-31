@@ -194,6 +194,25 @@ export const documentQueries = {
     WHERE organization_id = ? AND archived = 1
     ORDER BY archived_at DESC
   `),
+  softDelete: db.prepare<[number, number, string]>(`
+    UPDATE documents 
+    SET deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = ?
+    WHERE organization_id = ? AND path = ?
+  `),
+  listDeletedDocuments: db.prepare<[number], Document>(`
+    SELECT * FROM documents 
+    WHERE organization_id = ? AND deleted = 1
+    ORDER BY deleted_at DESC
+  `),
+  restoreDeleted: db.prepare<[number, string]>(`
+    UPDATE documents 
+    SET deleted = 0, deleted_at = NULL, deleted_by = NULL
+    WHERE organization_id = ? AND path = ?
+  `),
+  findOldDeletedDocuments: db.prepare<[string], Document>(`
+    SELECT * FROM documents 
+    WHERE deleted = 1 AND deleted_at < ?
+  `),
   permanentlyDelete: db.prepare<[number, string]>(
     "DELETE FROM documents WHERE organization_id = ? AND path = ?",
   ),
@@ -260,5 +279,65 @@ setInterval(
   },
   60 * 60 * 1000,
 ); // Every hour
+
+// Cleanup old deleted documents (30+ days old) - runs daily
+setInterval(
+  async () => {
+    try {
+      // Calculate date 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoffDate = thirtyDaysAgo.toISOString();
+
+      // Find all documents deleted more than 30 days ago
+      const oldDeleted =
+        documentQueries.findOldDeletedDocuments.all(cutoffDate);
+
+      console.log(
+        `🧹 Cleanup job: Found ${oldDeleted.length} documents to permanently delete`,
+      );
+
+      // Import fs for file deletion
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      for (const doc of oldDeleted) {
+        try {
+          // Delete from database with FTS cleanup
+          documentQueries.permanentlyDeleteWithFtsCleanup(
+            doc.organization_id,
+            doc.path,
+          );
+
+          // Delete physical file
+          const DOCUMENTS_PATH = process.env.DOCUMENTS_PATH || "./documents";
+          const orgPath = path.join(
+            DOCUMENTS_PATH,
+            `org-${doc.organization_id}`,
+          );
+          const filePath = path.join(orgPath, doc.path);
+
+          try {
+            await fs.unlink(filePath);
+            console.log(`  ✅ Deleted: ${doc.path}`);
+          } catch (err) {
+            console.log(`  ⚠️  File already deleted: ${doc.path}`);
+          }
+        } catch (error) {
+          console.error(`  ❌ Failed to delete ${doc.path}:`, error);
+        }
+      }
+
+      if (oldDeleted.length > 0) {
+        console.log(
+          `✅ Cleanup job completed: ${oldDeleted.length} documents permanently deleted`,
+        );
+      }
+    } catch (error) {
+      console.error("❌ Cleanup job failed:", error);
+    }
+  },
+  24 * 60 * 60 * 1000,
+); // Every 24 hours
 
 export default db;

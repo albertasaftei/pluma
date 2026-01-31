@@ -129,6 +129,7 @@ documentsRouter.get("/list", async (c) => {
       items
         .filter((item) => !item.name.endsWith(".meta.json")) // Filter out metadata files
         .filter((item) => !item.name.includes(".archived-")) // Filter out archived files
+        .filter((item) => !item.name.includes(".deleted-")) // Filter out deleted files
         .map(async (item) => {
           const itemPath = path.join(fullPath, item.name);
           const stats = await fs.stat(itemPath);
@@ -137,14 +138,14 @@ documentsRouter.get("/list", async (c) => {
           const docPath = "/" + relativePath.replace(/\\/g, "/");
           const metadataPath = itemPath + ".meta.json";
 
-          // Check if document is archived in database
+          // Check if document is archived or deleted in database
           const dbDoc = documentQueries.findByOrgAndPathIncludingArchived.get(
             organizationId,
             docPath,
           );
 
-          // Skip archived documents
-          if (dbDoc && dbDoc.archived === 1) {
+          // Skip archived or deleted documents
+          if (dbDoc && (dbDoc.archived === 1 || dbDoc.deleted === 1)) {
             return null;
           }
 
@@ -312,7 +313,7 @@ documentsRouter.post("/folder", async (c) => {
   }
 });
 
-// Delete document or folder
+// Delete document or folder (soft delete - moves to deleted folder)
 documentsRouter.delete("/delete", async (c) => {
   const filePath = c.req.query("path");
   const user = c.get("user");
@@ -332,12 +333,59 @@ documentsRouter.delete("/delete", async (c) => {
     const stats = await fs.stat(fullPath);
 
     if (stats.isDirectory()) {
+      // For folders, still do immediate deletion (or we could recursively soft delete all files)
       await fs.rm(fullPath, { recursive: true });
     } else {
-      // Delete the document file
-      await fs.unlink(fullPath);
+      // Soft delete: rename file with .deleted-{timestamp} suffix
+      const timestamp = Date.now();
+      const pathParts = filePath.split("/");
+      const fileName = pathParts.pop() || "";
+      const fileNameWithoutExt = fileName.replace(/\.md$/, "");
+      const deletedFileName = `${fileNameWithoutExt}.deleted-${timestamp}.md`;
+      const deletedPath = [...pathParts, deletedFileName].join("/");
 
-      // Also delete the metadata file if it exists
+      // Rename the physical file
+      const newFullPath = sanitizePath(deletedPath, organizationId);
+      try {
+        await fs.rename(fullPath, newFullPath);
+      } catch (err) {
+        console.error("Error renaming file:", err);
+      }
+
+      // Check if document exists in database
+      const existing = documentQueries.findByOrgAndPathIncludingArchived.get(
+        organizationId,
+        filePath,
+      );
+
+      if (existing) {
+        // Update database: mark as deleted and update path
+        db.prepare(
+          `
+          UPDATE documents 
+          SET path = ?, deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = ?
+          WHERE organization_id = ? AND path = ?
+        `,
+        ).run(deletedPath, user.userId, organizationId, filePath);
+      } else {
+        // Document not in DB, add it as deleted
+        const title = fileName.replace(/\.md$/, "");
+        documentQueries.upsert.run(
+          organizationId,
+          user.userId,
+          deletedPath,
+          title,
+          null,
+          stats.size,
+        );
+        documentQueries.softDelete.run(
+          user.userId,
+          organizationId,
+          deletedPath,
+        );
+      }
+
+      // Delete the metadata file if it exists
       const metaPath = `${fullPath}.meta.json`;
       try {
         await fs.unlink(metaPath);
@@ -772,6 +820,128 @@ documentsRouter.post("/archive/delete", async (c) => {
     return c.json({ success: true });
   } catch (error) {
     console.error("Error deleting archived document:", error);
+    return c.json({ error: "Failed to delete document" }, 500);
+  }
+});
+
+// List recently deleted documents
+documentsRouter.get("/deleted", async (c) => {
+  const user = c.get("user");
+
+  if (!user?.currentOrgId) {
+    return c.json({ error: "No organization selected" }, 400);
+  }
+
+  try {
+    const deleted = documentQueries.listDeletedDocuments.all(user.currentOrgId);
+
+    const items = deleted.map((doc) => ({
+      path: doc.path,
+      title: doc.title,
+      type: doc.path.includes(".") ? "file" : "folder",
+      color: doc.color,
+      modified: doc.updated_at,
+      size: doc.size,
+      deleted_at: doc.deleted_at,
+    }));
+
+    return c.json({ items });
+  } catch (error) {
+    console.error("Error listing deleted documents:", error);
+    return c.json({ error: "Failed to list deleted documents" }, 500);
+  }
+});
+
+// Restore recently deleted document
+documentsRouter.post("/deleted/restore", async (c) => {
+  const { path: docPath } = await c.req.json();
+  const user = c.get("user");
+
+  if (!user?.currentOrgId) {
+    return c.json({ error: "No organization selected" }, 400);
+  }
+
+  try {
+    // Extract original path by removing the .deleted-{timestamp} suffix
+    const restoredPath = docPath.replace(/\.deleted-\d+\.md$/, ".md");
+
+    // Check if a file with the restored name already exists
+    const existing = documentQueries.findByOrgAndPath.get(
+      user.currentOrgId,
+      restoredPath,
+    );
+
+    if (existing) {
+      return c.json(
+        {
+          error:
+            "A file with this name already exists. Please delete or rename it first.",
+        },
+        409,
+      );
+    }
+
+    // Rename the physical file back
+    const orgPath = getOrgDocumentsPath(user.currentOrgId);
+    const deletedFilePath = path.join(orgPath, docPath);
+    const restoredFilePath = path.join(orgPath, restoredPath);
+
+    try {
+      await fs.rename(deletedFilePath, restoredFilePath);
+    } catch (err) {
+      console.error("Error renaming file:", err);
+      // Continue anyway - file might not exist on disk
+    }
+
+    // Update database - restore original path and mark as not deleted
+    db.prepare(
+      `
+      UPDATE documents 
+      SET path = ?, deleted = 0, deleted_at = NULL, deleted_by = NULL
+      WHERE organization_id = ? AND path = ?
+    `,
+    ).run(restoredPath, user.currentOrgId, docPath);
+
+    return c.json({ success: true, restoredPath });
+  } catch (error) {
+    console.error("Error restoring document:", error);
+    return c.json({ error: "Failed to restore document" }, 500);
+  }
+});
+
+// Permanently delete recently deleted document
+documentsRouter.post("/deleted/permanent", async (c) => {
+  const { path: docPath } = await c.req.json();
+  const user = c.get("user");
+
+  if (!user?.currentOrgId) {
+    return c.json({ error: "No organization selected" }, 400);
+  }
+
+  try {
+    // Delete from database first
+    const result = documentQueries.permanentlyDeleteWithFtsCleanup(
+      user.currentOrgId,
+      docPath,
+    );
+
+    if (result.changes === 0) {
+      return c.json({ error: "Document not found in database" }, 404);
+    }
+
+    // Try to delete physical file (ignore if it doesn't exist)
+    const orgPath = getOrgDocumentsPath(user.currentOrgId);
+    const filePath = path.join(orgPath, docPath);
+    try {
+      await fs.unlink(filePath);
+    } catch (err) {
+      // File doesn't exist or already deleted, which is fine
+      console.log("File not found on filesystem (already deleted):", filePath);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error permanently deleting document:", error);
     return c.json({ error: "Failed to delete document" }, 500);
   }
 });

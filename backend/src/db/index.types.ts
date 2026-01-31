@@ -46,6 +46,9 @@ export interface Document {
   archived: number; // SQLite uses 0/1 for boolean
   archived_at: string | null;
   archived_by: number | null;
+  deleted: number; // SQLite uses 0/1 for boolean
+  deleted_at: string | null;
+  deleted_by: number | null;
   created_at: string;
   updated_at: string;
 }

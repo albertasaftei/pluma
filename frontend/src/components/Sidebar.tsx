@@ -341,7 +341,7 @@ export default function Sidebar(props: SidebarProps) {
           <For each={filteredTree()}>{(node) => <TreeNode node={node} />}</For>
         </div>
 
-        {/* Archive Button */}
+        {/* Archive & Recently Deleted Buttons */}
         <div class="p-4 space-y-2">
           <Button
             onClick={() => navigate("/archive")}
@@ -351,6 +351,15 @@ export default function Sidebar(props: SidebarProps) {
           >
             <div class="i-carbon-archive w-4 h-4" />
             <span class="ml-2">View Archive</span>
+          </Button>
+          <Button
+            onClick={() => navigate("/deleted")}
+            variant="ghost"
+            size="md"
+            fullWidth
+          >
+            <div class="i-carbon-trash-can w-4 h-4" />
+            <span class="ml-2">Recently Deleted</span>
           </Button>
           <Button
             onClick={() => navigate("/settings")}
