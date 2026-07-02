@@ -6,26 +6,39 @@ import NotificationCenter from "../NotificationCenter";
 import { useNavigate } from "@solidjs/router";
 import { routes } from "~/routes";
 import TreeNode from "./TreeNode";
-import type {
-  SidebarProps,
-  TreeNode as TreeNodeType,
-} from "~/types/Sidebar.types";
+import type { TreeNode as TreeNodeType } from "~/types/Sidebar.types";
 import type { Tag } from "~/types/Tag.types";
 import { useI18n } from "~/i18n";
 import { api } from "~/lib/api";
 
-interface SidebarContentProps extends Omit<
-  Readonly<SidebarProps>,
-  | "sidebarOpen"
-  | "expandedFolders"
-  | "onExpandFolder"
-  | "documents"
-  | "saveStatus"
-> {
+interface SidebarContentProps {
   filteredTree: Accessor<TreeNodeType[]>;
   setSidebarOpen: (open: boolean) => void;
   expandedFolders: Set<string>;
+  currentPath: string | null;
+  onSelectDocument: (path: string) => void;
   onExpandFolder: (path: string) => void;
+  onViewHome: () => void;
+  onViewSearch: () => void;
+  onViewArchive: () => void;
+  onViewDeleted: () => void;
+  onViewTags: () => void;
+  onViewOrgs: () => void;
+  onOrgSwitch: () => void;
+  onCreateDocument: (name: string, folderPath?: string) => void;
+  onCreateFolder: (name: string, parentPath?: string) => void;
+  onDeleteItem: (path: string) => void;
+  onArchiveItem: (path: string) => void;
+  onRenameItem?: (oldPath: string, newName: string) => void;
+  onMoveItem?: (
+    sourcePath: string,
+    destinationFolder: string,
+    targetOrgId?: number,
+    keepSource?: boolean,
+  ) => void;
+  onDuplicateItem?: (path: string) => void;
+  onToggleFavorite?: (path: string, favorite: boolean) => void;
+  onSetColor?: (path: string, color: string | null) => void;
   setShowFilterModal: (show: boolean) => void;
   selectedFilterTags: Accessor<number[]>;
   tags: Accessor<Tag[]>;

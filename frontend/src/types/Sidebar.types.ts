@@ -1,42 +1,9 @@
 import type { Document } from "~/lib/api";
 
-export interface SidebarProps {
-  documents: Document[];
-  currentPath: string | null;
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-  saveStatus: "saved" | "saving" | "unsaved";
-  expandedFolders: Set<string>;
-  onSelectDocument: (path: string) => void;
-  onCreateDocument: (name: string, folderPath?: string) => void;
-  onCreateFolder: (name: string, parentPath?: string) => void;
-  onDeleteItem: (path: string) => void;
-  onBulkDelete: (paths: string[]) => Promise<void>;
-  onRenameItem?: (oldPath: string, newName: string) => void;
-  onMoveItem?: (
-    sourcePath: string,
-    destinationFolder: string,
-    targetOrgId?: number,
-    keepSource?: boolean,
-  ) => void;
-  onExpandFolder: (path: string) => void;
-  onSetColor?: (path: string, color: string | null) => void;
-  onToggleFavorite?: (path: string, favorite: boolean) => void;
-  onOrgSwitch: () => void;
-  onArchiveItem: (path: string) => void;
-  onDuplicateItem?: (path: string) => void;
-  onReorderItem?: (
-    sourcePath: string,
-    targetPath: string,
-    operation: "reorder-before" | "reorder-after" | "make-child",
-  ) => void;
-  onViewHome: () => void;
-  onViewArchive: () => void;
-  onViewDeleted: () => void;
-  onViewSearch: () => void;
-  onViewTags: () => void;
-  onViewOrgs: () => void;
-}
+// SidebarProps is intentionally empty — Sidebar reads all state and callbacks
+// from AppLayoutContext via useAppLayout() and derives navigation from useNavigate().
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SidebarProps {}
 
 export interface TreeNode extends Document {
   children: TreeNode[];

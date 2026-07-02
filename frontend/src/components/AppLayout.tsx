@@ -27,7 +27,12 @@ export interface AppLayoutContext {
   toggleExpandFolder: (path: string) => void;
   sidebarOpen: () => boolean;
   setSidebarOpen: (open: boolean) => void;
+  // Document creation
+  createDocument: (name: string, folderPath?: string) => Promise<string>;
+  createFolder: (name: string, parentPath?: string) => Promise<void>;
+  // Mutations
   deleteItem: (path: string) => void;
+  bulkDelete: (paths: string[]) => Promise<void>;
   archiveItem: (path: string) => Promise<void>;
   renameItem: (oldPath: string, newName: string) => Promise<void>;
   moveItem: (
@@ -35,6 +40,11 @@ export interface AppLayoutContext {
     destinationFolder: string,
     targetOrgId?: number,
     keepSource?: boolean,
+  ) => Promise<void>;
+  reorderItem: (
+    sourcePath: string,
+    targetPath: string,
+    operation: "reorder-before" | "reorder-after" | "make-child",
   ) => Promise<void>;
   toggleFavorite: (path: string, favorite: boolean) => Promise<void>;
   setItemColor: (path: string, color: string | null) => Promise<void>;
@@ -127,13 +137,13 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
     }
   };
 
-  const createNewDocument = async (name: string, folderPath = "/") => {
-    try {
-      const result = await store.createDocument(name, folderPath);
-      navigate(`/file${encodePath(result.path)}`);
-    } catch (error) {
-      console.error("Failed to create document:", error);
-    }
+  const createNewDocument = async (
+    name: string,
+    folderPath = "/",
+  ): Promise<string> => {
+    const result = await store.createDocument(name, folderPath);
+    navigate(`/file${encodePath(result.path)}`);
+    return result.path;
   };
 
   const createNewFolder = async (name: string, parentPath = "/") => {
@@ -296,10 +306,14 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
     toggleExpandFolder,
     sidebarOpen,
     setSidebarOpen,
+    createDocument: createNewDocument,
+    createFolder: createNewFolder,
     deleteItem,
+    bulkDelete: bulkDeleteItems,
     archiveItem,
     renameItem,
     moveItem,
+    reorderItem,
     toggleFavorite,
     setItemColor,
     duplicateItem,
@@ -331,38 +345,7 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
           )}
 
           {/* Sidebar */}
-          {props.showSidebar && (
-            <Sidebar
-              documents={store.documents()}
-              currentPath={currentPath()}
-              sidebarOpen={sidebarOpen()}
-              setSidebarOpen={setSidebarOpen}
-              saveStatus="saved"
-              expandedFolders={expandedFolders()}
-              onSelectDocument={(path) =>
-                navigateAndClose(`/file${encodePath(path)}`)
-              }
-              onCreateDocument={createNewDocument}
-              onCreateFolder={createNewFolder}
-              onDeleteItem={deleteItem}
-              onBulkDelete={bulkDeleteItems}
-              onRenameItem={renameItem}
-              onMoveItem={moveItem}
-              onExpandFolder={toggleExpandFolder}
-              onSetColor={setItemColor}
-              onToggleFavorite={toggleFavorite}
-              onOrgSwitch={() => store.load()}
-              onArchiveItem={archiveItem}
-              onDuplicateItem={duplicateItem}
-              onReorderItem={reorderItem}
-              onViewHome={() => navigateAndClose(routes.homepage)}
-              onViewArchive={() => navigateAndClose(routes.archive)}
-              onViewDeleted={() => navigateAndClose(routes.deleted)}
-              onViewSearch={() => navigateAndClose(routes.search)}
-              onViewTags={() => navigateAndClose(routes.tags)}
-              onViewOrgs={() => navigateAndClose(routes.joinOrg)}
-            />
-          )}
+          {props.showSidebar && <Sidebar />}
 
           {/* Main Content Area */}
           <div class="flex-1 flex flex-col overflow-hidden">

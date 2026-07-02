@@ -11,15 +11,35 @@ import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/lis
 import AlertDialog from "./AlertDialog";
 import MoveDialog from "./MoveDialog";
 import { ResizableContainer } from "./ResizableContainer";
+import { useLocation, useNavigate } from "@solidjs/router";
 import { api } from "~/lib/api";
+import { useAppLayout } from "~/components/AppLayout";
 import type { SidebarProps, TreeNode } from "~/types/Sidebar.types";
 import { buildDocumentTree, buildFolderTree } from "~/utils/sidebar.utils";
 import { getDisplayName } from "~/utils/document.utils";
 import type { Tag } from "~/types/Tag.types";
 import FilterNotesBody from "./Sidebar/FilterNotesBody";
 import SidebarContent from "./Sidebar/SidebarContent";
+import { routes } from "~/routes";
 
-export default function Sidebar(props: Readonly<SidebarProps>) {
+export default function Sidebar(_props: Readonly<SidebarProps>) {
+  const layout = useAppLayout();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const encodePath = (path: string) =>
+    path.split("/").map(encodeURIComponent).join("/");
+
+  const currentPath = createMemo(() =>
+    decodeURIComponent(location.pathname.replace(/^\/file/, "")),
+  );
+
+  const navigateAndClose = (route: string) => {
+    navigate(route);
+    if (window.innerWidth < 1024) {
+      layout.setSidebarOpen(false);
+    }
+  };
   const [showNewDocModal, setShowNewDocModal] = createSignal(false);
   const [showNewFolderModal, setShowNewFolderModal] = createSignal(false);
   const [showRenameModal, setShowRenameModal] = createSignal(false);
@@ -58,7 +78,7 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
   let newFolderInputRef: HTMLInputElement | undefined;
   let renameInputRef: HTMLInputElement | undefined;
 
-  const tree = createMemo(() => buildDocumentTree(props.documents));
+  const tree = createMemo(() => buildDocumentTree(layout.allDocuments()));
 
   const filteredTree = createMemo(() => {
     const currentTree = tree();
@@ -105,7 +125,7 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
       }
     };
 
-    flatten(buildFolderTree(props.documents));
+    flatten(buildFolderTree(layout.allDocuments()));
     return result;
   });
 
@@ -161,9 +181,9 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
           inst.operation === "reorder-before" ||
           inst.operation === "reorder-after"
         ) {
-          props.onReorderItem?.(sourceData.path, targetPath, inst.operation);
+          layout.reorderItem(sourceData.path, targetPath, inst.operation);
         } else if (inst.operation === "combine" && targetType === "folder") {
-          props.onReorderItem?.(sourceData.path, targetPath, "make-child");
+          layout.reorderItem(sourceData.path, targetPath, "make-child");
         }
       },
     });
@@ -193,7 +213,7 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
     const name = newDocName().trim();
     if (!name) return;
 
-    props.onCreateDocument(name, targetFolder());
+    layout.createDocument(name, targetFolder());
     setNewDocName(getDefaultDocName());
     setTargetFolder("/");
     setShowNewDocModal(false);
@@ -204,9 +224,9 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
     const parent = targetFolder();
     if (!name) return;
 
-    props.onCreateFolder(name, parent);
+    layout.createFolder(name, parent);
     if (parent !== "/") {
-      props.onExpandFolder(parent);
+      layout.toggleExpandFolder(parent);
     }
 
     setNewFolderName("");
@@ -217,9 +237,9 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
   const handleRename = () => {
     const name = newItemName().trim();
     const oldPath = itemToRename();
-    if (!name || !oldPath || !props.onRenameItem) return;
+    if (!name || !oldPath) return;
 
-    props.onRenameItem(oldPath, name);
+    layout.renameItem(oldPath, name);
     setNewItemName("");
     setItemToRename(null);
     setShowRenameModal(false);
@@ -239,63 +259,66 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
     getDefaultDocName,
   };
 
+  const sidebarContentProps = createMemo(() => ({
+    filteredTree,
+    expandedFolders: layout.expandedFolders(),
+    currentPath: currentPath(),
+    onSelectDocument: (path: string) =>
+      navigateAndClose(`/file${encodePath(path)}`),
+    onExpandFolder: layout.toggleExpandFolder,
+    onViewHome: () => navigateAndClose(routes.homepage),
+    onViewSearch: () => navigateAndClose(routes.search),
+    onViewArchive: () => navigateAndClose(routes.archive),
+    onViewDeleted: () => navigateAndClose(routes.deleted),
+    onViewTags: () => navigateAndClose(routes.tags),
+    onViewOrgs: () => navigateAndClose(routes.joinOrg),
+    onOrgSwitch: layout.loadAllDocuments,
+    setSidebarOpen: layout.setSidebarOpen,
+    onCreateDocument: layout.createDocument,
+    onCreateFolder: layout.createFolder,
+    onDeleteItem: layout.deleteItem,
+    onArchiveItem: layout.archiveItem,
+    onRenameItem: layout.renameItem,
+    onMoveItem: layout.moveItem,
+    onDuplicateItem: layout.duplicateItem,
+    onToggleFavorite: layout.toggleFavorite,
+    onSetColor: layout.setItemColor,
+    setShowFilterModal,
+    selectedFilterTags,
+    tags,
+    tagMappings,
+    onToggleTag: async (path: string, tagId: number, add: boolean) => {
+      const currentTags = tagMappings()[path] || [];
+      const newTags = add
+        ? [...currentTags, tagId]
+        : currentTags.filter((t) => t !== tagId);
+      await api.setDocumentTags(path, newTags);
+      refreshTags();
+    },
+    onBulkMove: (paths: string[]) => {
+      setBulkMovePaths(paths);
+      setItemToMove({
+        path: paths[0],
+        name: `${paths.length} item${paths.length === 1 ? "" : "s"}`,
+        type: "file" as const,
+      });
+      setShowMoveModal(true);
+    },
+    onBulkDelete: layout.bulkDelete,
+    onModalOpen: modalActions,
+  }));
+
   return (
     <>
       <Show when={isMounted() && isMobile()}>
         <aside
           class="w-80 h-full border-r border-base bg-base flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out"
           classList={{
-            "-translate-x-full": !props.sidebarOpen,
-            "translate-x-0": props.sidebarOpen,
+            "-translate-x-full": !layout.sidebarOpen(),
+            "translate-x-0": layout.sidebarOpen(),
           }}
         >
-          <SidebarContent
-            filteredTree={filteredTree}
-            expandedFolders={props.expandedFolders}
-            currentPath={props.currentPath}
-            onSelectDocument={props.onSelectDocument}
-            onExpandFolder={props.onExpandFolder}
-            onViewHome={props.onViewHome}
-            onViewSearch={props.onViewSearch}
-            onViewArchive={props.onViewArchive}
-            onViewDeleted={props.onViewDeleted}
-            onViewTags={props.onViewTags}
-            onViewOrgs={props.onViewOrgs}
-            onOrgSwitch={props.onOrgSwitch}
-            setSidebarOpen={props.setSidebarOpen}
-            onCreateDocument={props.onCreateDocument}
-            onCreateFolder={props.onCreateFolder}
-            onDeleteItem={props.onDeleteItem}
-            onArchiveItem={props.onArchiveItem}
-            onRenameItem={props.onRenameItem}
-            onMoveItem={props.onMoveItem}
-            onDuplicateItem={props.onDuplicateItem}
-            onToggleFavorite={props.onToggleFavorite}
-            onSetColor={props.onSetColor}
-            setShowFilterModal={setShowFilterModal}
-            selectedFilterTags={selectedFilterTags}
-            tags={tags}
-            tagMappings={tagMappings}
-            onToggleTag={async (path: string, tagId: number, add: boolean) => {
-              const currentTags = tagMappings()[path] || [];
-              const newTags = add
-                ? [...currentTags, tagId]
-                : currentTags.filter((t) => t !== tagId);
-              await api.setDocumentTags(path, newTags);
-              refreshTags();
-            }}
-            onBulkMove={(paths) => {
-              setBulkMovePaths(paths);
-              setItemToMove({
-                path: paths[0],
-                name: `${paths.length} item${paths.length === 1 ? "" : "s"}`,
-                type: "file",
-              });
-              setShowMoveModal(true);
-            }}
-            onBulkDelete={props.onBulkDelete}
-            onModalOpen={modalActions}
-          />
+          <SidebarContent {...sidebarContentProps()} />
         </aside>
       </Show>
 
@@ -307,53 +330,7 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
           resizeFrom="right"
           class="h-full border-r border-base bg-base flex flex-col relative"
         >
-          <SidebarContent
-            filteredTree={filteredTree}
-            expandedFolders={props.expandedFolders}
-            currentPath={props.currentPath}
-            onSelectDocument={props.onSelectDocument}
-            onExpandFolder={props.onExpandFolder}
-            onViewHome={props.onViewHome}
-            onViewSearch={props.onViewSearch}
-            onViewArchive={props.onViewArchive}
-            onViewDeleted={props.onViewDeleted}
-            onViewTags={props.onViewTags}
-            onViewOrgs={props.onViewOrgs}
-            onOrgSwitch={props.onOrgSwitch}
-            setSidebarOpen={props.setSidebarOpen}
-            onCreateDocument={props.onCreateDocument}
-            onCreateFolder={props.onCreateFolder}
-            onDeleteItem={props.onDeleteItem}
-            onArchiveItem={props.onArchiveItem}
-            onRenameItem={props.onRenameItem}
-            onMoveItem={props.onMoveItem}
-            onDuplicateItem={props.onDuplicateItem}
-            onToggleFavorite={props.onToggleFavorite}
-            onSetColor={props.onSetColor}
-            setShowFilterModal={setShowFilterModal}
-            selectedFilterTags={selectedFilterTags}
-            tags={tags}
-            tagMappings={tagMappings}
-            onToggleTag={async (path: string, tagId: number, add: boolean) => {
-              const currentTags = tagMappings()[path] || [];
-              const newTags = add
-                ? [...currentTags, tagId]
-                : currentTags.filter((t) => t !== tagId);
-              await api.setDocumentTags(path, newTags);
-              refreshTags();
-            }}
-            onBulkMove={(paths) => {
-              setBulkMovePaths(paths);
-              setItemToMove({
-                path: paths[0],
-                name: `${paths.length} item${paths.length === 1 ? "" : "s"}`,
-                type: "file",
-              });
-              setShowMoveModal(true);
-            }}
-            onBulkDelete={props.onBulkDelete}
-            onModalOpen={modalActions}
-          />
+          <SidebarContent {...sidebarContentProps()} />
         </ResizableContainer>
       </Show>
 
@@ -434,18 +411,18 @@ export default function Sidebar(props: Readonly<SidebarProps>) {
         itemPath={itemToMove()?.path ?? ""}
         itemName={itemToMove()?.name ?? ""}
         itemType={itemToMove()?.type ?? "file"}
-        documents={props.documents}
+        documents={layout.allDocuments()}
         onConfirm={(dest, targetOrgId, keepSource) => {
           const bulk = bulkMovePaths();
           if (bulk.length > 0) {
             bulk.forEach((path) =>
-              props.onMoveItem?.(path, dest, targetOrgId, keepSource),
+              layout.moveItem(path, dest, targetOrgId, keepSource),
             );
             setBulkMovePaths([]);
           } else {
             const source = itemToMove();
-            if (source && props.onMoveItem) {
-              props.onMoveItem(source.path, dest, targetOrgId, keepSource);
+            if (source) {
+              layout.moveItem(source.path, dest, targetOrgId, keepSource);
             }
           }
           setShowMoveModal(false);
