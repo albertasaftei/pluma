@@ -415,17 +415,48 @@ export const codeBlockViewPlugin = $prose(() => {
           copyBtn.onclick = async (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
-            const text = code.textContent;
-            try {
-              await navigator.clipboard.writeText(text || "");
+            const text = code.textContent || "";
+            let success = false;
+            if (navigator.clipboard && window.isSecureContext) {
+              try {
+                await navigator.clipboard.writeText(text);
+                success = true;
+              } catch {
+                // fall through to legacy fallback
+              }
+            }
+            if (!success) {
+              // Fallback for non-secure contexts (plain HTTP on LAN, etc.)
+              try {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                ta.style.top = "0";
+                ta.style.left = "0";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                success = document.execCommand("copy");
+                document.body.removeChild(ta);
+              } catch {
+                // both methods failed
+              }
+            }
+            if (success) {
               copyBtn.textContent = "Copied!";
               copyBtn.classList.add("copied");
               setTimeout(() => {
                 copyBtn.textContent = "Copy";
                 copyBtn.classList.remove("copied");
               }, 2000);
-            } catch (err) {
-              console.error("Failed to copy:", err);
+            } else {
+              copyBtn.textContent = "Failed";
+              copyBtn.classList.add("failed");
+              setTimeout(() => {
+                copyBtn.textContent = "Copy";
+                copyBtn.classList.remove("failed");
+              }, 2000);
             }
           };
 

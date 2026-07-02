@@ -702,6 +702,10 @@
   opacity: 1;
 }
 
+.code-block-copy-btn.failed {
+  color: #f87171;
+}
+
 /* ── Task list styling ── */
 .milkdown li[data-item-type="task"] {
   list-style: none !important;
@@ -910,6 +914,10 @@
 
 .light .code-block-copy-btn.copied {
   color: #16a34a !important;
+}
+
+.light .code-block-copy-btn.failed {
+  color: #dc2626 !important;
 }
 
 /* Light theme code fence */
