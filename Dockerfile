@@ -17,7 +17,9 @@ RUN npm install -g pnpm
 # Build frontend
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN printf 'supportedArchitectures[os]=linux\nsupportedArchitectures[cpu][]=x64\nsupportedArchitectures[cpu][]=arm64\nsupportedArchitectures[libc][]=musl\n' > .npmrc
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY frontend/src ./src
 COPY frontend/public ./public
