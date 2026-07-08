@@ -145,6 +145,7 @@ async function readFolderItems(
           path: docPath,
           type: item.isDirectory() ? "folder" : "file",
           modified: stats.mtime.toISOString(),
+          created_at: dbDoc?.created_at ?? stats.birthtime.toISOString(),
           size: stats.size,
           color: metadata.color || undefined,
           favorite: metadata.favorite || false,
@@ -501,7 +502,10 @@ documentsRouter.post(
 
     try {
       const result = await lifecycle.rename(ctx, oldPath, newPath);
-      return c.json({ message: "Renamed successfully", newPath: result.newPath });
+      return c.json({
+        message: "Renamed successfully",
+        newPath: result.newPath,
+      });
     } catch (error) {
       if (error instanceof lifecycle.ConflictError) {
         return c.json({ error: error.message }, 409);

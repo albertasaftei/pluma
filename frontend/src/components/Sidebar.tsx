@@ -72,6 +72,12 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
   const [tagMappings, setTagMappings] = createSignal<Record<string, number[]>>(
     {},
   );
+  const [filterModifiedFrom, setFilterModifiedFrom] = createSignal("");
+  const [filterModifiedTo, setFilterModifiedTo] = createSignal("");
+  const [filterCreatedFrom, setFilterCreatedFrom] = createSignal("");
+  const [filterCreatedTo, setFilterCreatedTo] = createSignal("");
+  const [filterFavorite, setFilterFavorite] = createSignal(false);
+  const [filterColors, setFilterColors] = createSignal<string[]>([]);
 
   let newDocInputRef: HTMLInputElement | undefined;
   let newFolderInputRef: HTMLInputElement | undefined;
@@ -79,22 +85,82 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
 
   const tree = createMemo(() => buildDocumentTree(layout.allDocuments()));
 
+  const availableColors = createMemo(() => {
+    const colors = new Set<string>();
+    let hasNoColor = false;
+    for (const doc of layout.allDocuments()) {
+      if (doc.type === "file") {
+        if (doc.color) colors.add(doc.color);
+        else hasNoColor = true;
+      }
+    }
+    return { colors: [...colors], hasNoColor };
+  });
+
+  const activeFilterCount = createMemo(() => {
+    let count = selectedFilterTags().length;
+    if (filterModifiedFrom()) count++;
+    if (filterModifiedTo()) count++;
+    if (filterCreatedFrom()) count++;
+    if (filterCreatedTo()) count++;
+    if (filterFavorite()) count++;
+    count += filterColors().length;
+    return count;
+  });
+
   const filteredTree = createMemo(() => {
     const currentTree = tree();
     const filterTags = selectedFilterTags();
-    if (filterTags.length === 0) return currentTree;
+    const modFrom = filterModifiedFrom();
+    const modTo = filterModifiedTo();
+    const createdFrom = filterCreatedFrom();
+    const createdTo = filterCreatedTo();
+    const favOnly = filterFavorite();
+    const colors = filterColors();
+
+    const hasTagFilter = filterTags.length > 0;
+    const hasDateFilter = modFrom || modTo || createdFrom || createdTo;
+    const hasFavFilter = favOnly;
+    const hasColorFilter = colors.length > 0;
+
+    if (!hasTagFilter && !hasDateFilter && !hasFavFilter && !hasColorFilter) {
+      return currentTree;
+    }
 
     const mappings = tagMappings();
     const mode = filterMode();
 
     const filterNode = (node: TreeNode): TreeNode | null => {
       if (node.type === "file") {
-        const docTags = mappings[node.path] || [];
-        const matches =
-          mode === "any"
-            ? filterTags.some((t) => docTags.includes(t))
-            : filterTags.every((t) => docTags.includes(t));
-        return matches ? node : null;
+        if (hasTagFilter) {
+          const docTags = mappings[node.path] || [];
+          const tagMatch =
+            mode === "any"
+              ? filterTags.some((t) => docTags.includes(t))
+              : filterTags.every((t) => docTags.includes(t));
+          if (!tagMatch) return null;
+        }
+
+        if (modFrom || modTo) {
+          const d = node.modified.slice(0, 10);
+          if (modFrom && d < modFrom) return null;
+          if (modTo && d > modTo) return null;
+        }
+
+        if (createdFrom || createdTo) {
+          const d = (node.created_at ?? node.modified).slice(0, 10);
+          if (createdFrom && d < createdFrom) return null;
+          if (createdTo && d > createdTo) return null;
+        }
+
+        if (hasFavFilter && !node.favorite) return null;
+
+        if (hasColorFilter) {
+          const c = node.color ?? "none";
+          if (!colors.includes(c)) return null;
+        }
+
+        return node;
       }
 
       const filteredChildren = node.children
@@ -277,6 +343,7 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
     onSetColor: layout.setItemColor,
     setShowFilterModal,
     selectedFilterTags,
+    activeFilterCount,
     tags,
     tagMappings,
     onToggleTag: async (path: string, tagId: number, add: boolean) => {
@@ -435,6 +502,19 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
           selectedFilterTags={selectedFilterTags}
           setSelectedFilterTags={setSelectedFilterTags}
           tags={tags}
+          filterModifiedFrom={filterModifiedFrom}
+          setFilterModifiedFrom={setFilterModifiedFrom}
+          filterModifiedTo={filterModifiedTo}
+          setFilterModifiedTo={setFilterModifiedTo}
+          filterCreatedFrom={filterCreatedFrom}
+          setFilterCreatedFrom={setFilterCreatedFrom}
+          filterCreatedTo={filterCreatedTo}
+          setFilterCreatedTo={setFilterCreatedTo}
+          filterFavorite={filterFavorite}
+          setFilterFavorite={setFilterFavorite}
+          filterColors={filterColors}
+          setFilterColors={setFilterColors}
+          availableColors={availableColors}
         />
       </AlertDialog>
     </>

@@ -35,6 +35,7 @@ export interface Document {
   path: string;
   type: "file" | "folder";
   modified: string;
+  created_at?: string;
   size: number;
   color?: string;
   favorite?: boolean;

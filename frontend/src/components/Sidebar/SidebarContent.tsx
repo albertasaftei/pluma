@@ -42,6 +42,7 @@ interface SidebarContentProps {
   onSetColor?: (path: string, color: string | null) => void;
   setShowFilterModal: (show: boolean) => void;
   selectedFilterTags: Accessor<number[]>;
+  activeFilterCount: Accessor<number>;
   tags: Accessor<Tag[]>;
   onModalOpen: {
     setShowNewDocModal: (show: boolean) => void;
@@ -240,9 +241,7 @@ export default function SidebarContent(props: SidebarContentProps) {
                   <Button
                     onClick={() => props.setShowFilterModal(true)}
                     variant={
-                      props.selectedFilterTags().length > 0
-                        ? "primary"
-                        : "secondary"
+                      props.activeFilterCount() > 0 ? "primary" : "secondary"
                     }
                     size="md"
                     title="Filter"
@@ -250,9 +249,9 @@ export default function SidebarContent(props: SidebarContentProps) {
                   >
                     <div class="i-carbon-filter w-4 h-4" />
                   </Button>
-                  <Show when={props.selectedFilterTags().length > 0}>
+                  <Show when={props.activeFilterCount() > 0}>
                     <span class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-surface border border-[var(--color-primary)] text-[var(--color-primary)] text-[10px] flex items-center justify-center font-semibold pointer-events-none shadow-sm">
-                      {props.selectedFilterTags().length}
+                      {props.activeFilterCount()}
                     </span>
                   </Show>
                 </div>
