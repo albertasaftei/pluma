@@ -9,12 +9,11 @@ import {
 } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import Sidebar from "~/components/Sidebar";
-import Button from "~/components/Button";
 import AlertDialog from "~/components/AlertDialog";
 import Toast from "~/components/Toast";
 import { api, type Document } from "~/lib/api";
 import { syncThemeFromServer } from "~/lib/theme";
-import { isMobile } from "~/utils/device.utils";
+import { isMobileOrTablet } from "~/utils/device.utils";
 import { routes } from "~/routes";
 import { createDocumentStore } from "~/lib/documentStore";
 
@@ -84,7 +83,7 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
 
   // Validate session and load documents on mount
   onMount(async () => {
-    setSidebarOpen(!isMobile(1024));
+    setSidebarOpen(!isMobileOrTablet());
 
     // In demo mode, skip session validation
     if (!isDemoMode) {
@@ -336,31 +335,11 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
 
         {/* Main Content Area */}
         <div class="flex-1 flex overflow-hidden relative">
-          {/* Mobile overlay backdrop */}
-          {props.showSidebar && sidebarOpen() && (
-            <div
-              class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
           {/* Sidebar */}
           {props.showSidebar && <Sidebar />}
 
           {/* Main Content Area */}
           <div class="flex-1 flex flex-col overflow-hidden">
-            {/* Mobile header with menu toggle */}
-            {props.showSidebar && (
-              <div class="lg:hidden border-b border-subtle bg-base p-4">
-                <Button
-                  onClick={() => setSidebarOpen(true)}
-                  variant="ghost"
-                  size="md"
-                >
-                  <div class="i-carbon-menu w-5 h-5" />
-                </Button>
-              </div>
-            )}
             {props.children}
           </div>
         </div>

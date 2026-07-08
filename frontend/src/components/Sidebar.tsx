@@ -17,6 +17,7 @@ import { useAppLayout } from "~/components/AppLayout";
 import type { SidebarProps, TreeNode } from "~/types/Sidebar.types";
 import { buildDocumentTree, buildFolderTree } from "~/utils/sidebar.utils";
 import { getDisplayName } from "~/utils/document.utils";
+import { isMobileOrTablet } from "~/utils/device.utils";
 import type { Tag } from "~/types/Tag.types";
 import FilterNotesBody from "./Sidebar/FilterNotesBody";
 import SidebarContent from "./Sidebar/SidebarContent";
@@ -36,7 +37,7 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
 
   const navigateAndClose = (route: string) => {
     navigate(route);
-    if (window.innerWidth < 1024) {
+    if (isMobileOrTablet()) {
       layout.setSidebarOpen(false);
     }
   };
@@ -62,8 +63,6 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
     type: "file" | "folder";
   } | null>(null);
   const [bulkMovePaths, setBulkMovePaths] = createSignal<string[]>([]);
-  const [isMobile, setIsMobile] = createSignal(false);
-  const [isMounted, setIsMounted] = createSignal(false);
 
   const [tags, setTags] = createSignal<Tag[]>([]);
   const [selectedFilterTags, setSelectedFilterTags] = createSignal<number[]>(
@@ -127,14 +126,6 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
 
     flatten(buildFolderTree(layout.allDocuments()));
     return result;
-  });
-
-  onMount(() => {
-    setIsMounted(true);
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    onCleanup(() => window.removeEventListener("resize", checkMobile));
   });
 
   const refreshTags = async () => {
@@ -273,7 +264,8 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
     onViewTags: () => navigateAndClose(routes.tags),
     onViewOrgs: () => navigateAndClose(routes.joinOrg),
     onOrgSwitch: layout.loadAllDocuments,
-    setSidebarOpen: layout.setSidebarOpen,
+    collapsed: !layout.sidebarOpen(),
+    onToggleCollapse: () => layout.setSidebarOpen(!layout.sidebarOpen()),
     onCreateDocument: layout.createDocument,
     onCreateFolder: layout.createFolder,
     onDeleteItem: layout.deleteItem,
@@ -310,19 +302,14 @@ export default function Sidebar(_props: Readonly<SidebarProps>) {
 
   return (
     <>
-      <Show when={isMounted() && isMobile()}>
-        <aside
-          class="w-80 h-full border-r border-base bg-base flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out"
-          classList={{
-            "-translate-x-full": !layout.sidebarOpen(),
-            "translate-x-0": layout.sidebarOpen(),
-          }}
-        >
-          <SidebarContent {...sidebarContentProps()} />
-        </aside>
-      </Show>
-
-      <Show when={!isMounted() || !isMobile()}>
+      <Show
+        when={layout.sidebarOpen()}
+        fallback={
+          <div class="h-full border-r border-base bg-surface flex-shrink-0">
+            <SidebarContent {...sidebarContentProps()} />
+          </div>
+        }
+      >
         <ResizableContainer
           initialSize={350}
           minSize={300}
