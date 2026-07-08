@@ -58,7 +58,7 @@ export async function getUniqueFilePath(
   const dir = path.dirname(basePath);
   const filename = path.basename(basePath);
   const ext = path.extname(filename);
-  const nameWithoutExt = filename.slice(0, -ext.length);
+  const nameWithoutExt = ext ? filename.slice(0, -ext.length) : filename;
 
   // Try with incrementing counter until we find a unique name
   let counter = 1;
