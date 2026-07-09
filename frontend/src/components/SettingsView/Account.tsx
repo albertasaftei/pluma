@@ -1,61 +1,72 @@
-import { createSignal, onMount, For } from "solid-js";
-import { Show } from "solid-js";
+import { createSignal, onMount, For, Show } from "solid-js";
 import { api } from "~/lib/api";
 import Button from "~/components/Button";
 import Toast from "~/components/Toast";
 import { useI18n, SUPPORTED_LOCALES, LOCALE_NAMES } from "~/i18n";
+import {
+  createUsernameState,
+  createPasswordState,
+  createEmailChangeState,
+} from "./Account.state";
 
 export default function Account() {
   const { t, locale, setLocale } = useI18n();
-  const [username, setUsername] = createSignal<string | null>(null);
-  const [email, setEmail] = createSignal<string | null>(null);
-  const [editingUsername, setEditingUsername] = createSignal(false);
-  const [newUsername, setNewUsername] = createSignal("");
-  const [savingUsername, setSavingUsername] = createSignal(false);
-  const [usernameError, setUsernameError] = createSignal("");
+
+  const {
+    username,
+    setUsername,
+    email,
+    setEmail,
+    editingUsername,
+    setEditingUsername,
+    newUsername,
+    setNewUsername,
+    savingUsername,
+    setSavingUsername,
+    usernameError,
+    setUsernameError,
+  } = createUsernameState();
+
   const [toast, setToast] = createSignal<{
     message: string;
     type: "success" | "error" | "info" | "warning";
   } | null>(null);
 
-  // Change password modal state
-  const [changingPassword, setChangingPassword] = createSignal(false);
-  const [currentPassword, setCurrentPassword] = createSignal("");
-  const [newPassword, setNewPassword] = createSignal("");
-  const [confirmNewPassword, setConfirmNewPassword] = createSignal("");
-  const [showCurrentPassword, setShowCurrentPassword] = createSignal(false);
-  const [showNewPassword, setShowNewPassword] = createSignal(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] =
-    createSignal(false);
-  const [passwordError, setPasswordError] = createSignal("");
-  const [savingPassword, setSavingPassword] = createSignal(false);
+  const {
+    changingPassword,
+    setChangingPassword,
+    currentPassword,
+    setCurrentPassword,
+    newPassword,
+    setNewPassword,
+    confirmNewPassword,
+    setConfirmNewPassword,
+    showCurrentPassword,
+    setShowCurrentPassword,
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmNewPassword,
+    setShowConfirmNewPassword,
+    passwordError,
+    setPasswordError,
+    savingPassword,
+    setSavingPassword,
+    reset: resetPasswordModal,
+  } = createPasswordState();
 
-  // Change email modal state
-  const [changingEmail, setChangingEmail] = createSignal(false);
-  const [newEmailInput, setNewEmailInput] = createSignal("");
-  const [emailChangeError, setEmailChangeError] = createSignal("");
-  const [emailChangeSending, setEmailChangeSending] = createSignal(false);
-  const [emailChangeSent, setEmailChangeSent] = createSignal(false);
-
-  const resetEmailModal = () => {
-    setNewEmailInput("");
-    setEmailChangeError("");
-    setEmailChangeSending(false);
-    setEmailChangeSent(false);
-    setChangingEmail(false);
-  };
-
-  const resetPasswordModal = () => {
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setShowCurrentPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmNewPassword(false);
-    setPasswordError("");
-    setSavingPassword(false);
-    setChangingPassword(false);
-  };
+  const {
+    changingEmail,
+    setChangingEmail,
+    newEmailInput,
+    setNewEmailInput,
+    emailChangeError,
+    setEmailChangeError,
+    emailChangeSending,
+    setEmailChangeSending,
+    emailChangeSent,
+    setEmailChangeSent,
+    reset: resetEmailModal,
+  } = createEmailChangeState();
 
   const handleChangePassword = async (e: Event) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { Show, type Accessor } from "solid-js";
+import { Show, batch, type Accessor } from "solid-js";
 import { Popover } from "@kobalte/core/popover";
 import PopoverItem from "./PopoverItem";
 import ColorPicker from "./ColorPicker";
@@ -68,8 +68,10 @@ export default function DocumentMenuContent(props: DocumentMenuContentProps) {
         <PopoverItem
           onClick={(e) => {
             e.stopPropagation();
-            props.onToggleFavorite!(!props.isFavorite);
-            props.onClose();
+            batch(() => {
+              props.onToggleFavorite!(!props.isFavorite);
+              props.onClose();
+            });
           }}
         >
           <div
@@ -250,8 +252,10 @@ export default function DocumentMenuContent(props: DocumentMenuContentProps) {
         <ColorPicker
           currentColor={props.color}
           onColorSelect={(color) => {
-            props.onSetColor!(color);
-            props.onClose();
+            batch(() => {
+              props.onSetColor!(color);
+              props.onClose();
+            });
           }}
         />
       </Show>

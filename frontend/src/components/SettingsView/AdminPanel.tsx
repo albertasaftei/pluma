@@ -5,30 +5,14 @@ import AlertDialog from "../AlertDialog";
 import Toast from "../Toast";
 import { formatAbsoluteDate } from "~/utils/date.utils";
 import { useI18n } from "~/i18n";
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  createdAt: string;
-  isAdmin: boolean;
-  isBanned: boolean;
-}
-
-interface OrgMembership {
-  orgId: number;
-  orgName: string;
-  orgSlug: string;
-  role: string;
-  joinedAt: string;
-  isOwner: boolean;
-}
-
-interface OrgListItem {
-  id: number;
-  name: string;
-  slug: string;
-}
+import {
+  type User,
+  type OrgMembership,
+  type OrgListItem,
+  createAdminUserListState,
+  createAdminCreateFormState,
+  createAdminOrgState,
+} from "./AdminPanel.state";
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -38,37 +22,46 @@ interface AdminPanelProps {
 
 export default function AdminPanel(props: AdminPanelProps) {
   const { t } = useI18n();
-  const [users, setUsers] = createSignal<User[]>([]);
-  const [loading, setLoading] = createSignal(false);
-  const [isOwner, setIsOwner] = createSignal(false);
-  const [showCreateForm, setShowCreateForm] = createSignal(false);
+
+  const { users, setUsers, loading, setLoading, isOwner, setIsOwner } =
+    createAdminUserListState();
+
+  const {
+    showCreateForm,
+    setShowCreateForm,
+    username,
+    setUsername,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    newUserIsAdmin,
+    setNewUserIsAdmin,
+    error,
+    setError,
+  } = createAdminCreateFormState();
+
+  const {
+    expandedUserId,
+    setExpandedUserId,
+    userOrgsCache,
+    setUserOrgsCache,
+    allOrgs,
+    setAllOrgs,
+    orgLoadingFor,
+    setOrgLoadingFor,
+    addOrgForm,
+    setAddOrgForm,
+  } = createAdminOrgState();
+
   const [deleteDialog, setDeleteDialog] = createSignal<{
     isOpen: boolean;
     user: User | null;
   }>({ isOpen: false, user: null });
-
-  // Form state
-  const [username, setUsername] = createSignal("");
-  const [email, setEmail] = createSignal("");
-  const [password, setPassword] = createSignal("");
-  const [newUserIsAdmin, setNewUserIsAdmin] = createSignal(false);
-  const [error, setError] = createSignal("");
   const [toast, setToast] = createSignal<{
     message: string;
     type: "success" | "error" | "info" | "warning";
   } | null>(null);
-
-  // Per-user org expansion state
-  const [expandedUserId, setExpandedUserId] = createSignal<number | null>(null);
-  const [userOrgsCache, setUserOrgsCache] = createSignal<
-    Record<number, OrgMembership[]>
-  >({});
-  const [allOrgs, setAllOrgs] = createSignal<OrgListItem[]>([]);
-  const [orgLoadingFor, setOrgLoadingFor] = createSignal<number | null>(null);
-  // Per-user "add to org" form state: { orgId, role }
-  const [addOrgForm, setAddOrgForm] = createSignal<
-    Record<number, { orgId: number; role: string }>
-  >({});
 
   const loadUsers = async () => {
     setLoading(true);

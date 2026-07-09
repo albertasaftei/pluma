@@ -8,34 +8,43 @@ import { useI18n } from "~/i18n";
 import CreateApiKeyDialog from "./CreateApiKeyDialog";
 import ApiKeyCreatedDialog from "./ApiKeyCreatedDialog";
 import type { ApiKey } from "./types";
+import {
+  createApiKeyListState,
+  createApiKeyFormState,
+  createApiKeyRevokeState,
+} from "./ApiKeysPanel.state";
 
 export default function ApiKeysPanel() {
   const { t } = useI18n();
-  const [keys, setKeys] = createSignal<ApiKey[]>([]);
-  const [loading, setLoading] = createSignal(true);
+
+  const { keys, setKeys, loading, setLoading } = createApiKeyListState();
+
   const [toast, setToast] = createSignal<{
     message: string;
     type: "success" | "error" | "info" | "warning";
   } | null>(null);
 
-  // Create form state
-  const [showCreate, setShowCreate] = createSignal(false);
-  const [formName, setFormName] = createSignal("");
-  const [formPermissions, setFormPermissions] = createSignal<string[]>([]);
-  const [formExpiresAt, setFormExpiresAt] = createSignal("");
-  const [saving, setSaving] = createSignal(false);
-  const [formError, setFormError] = createSignal("");
+  const {
+    showCreate,
+    setShowCreate,
+    formName,
+    setFormName,
+    formPermissions,
+    setFormPermissions,
+    formExpiresAt,
+    setFormExpiresAt,
+    saving,
+    setSaving,
+    formError,
+    setFormError,
+    createdKey,
+    setCreatedKey,
+    showCreated,
+    setShowCreated,
+  } = createApiKeyFormState();
 
-  // Created key one-time display
-  const [createdKey, setCreatedKey] = createSignal("");
-  const [showCreated, setShowCreated] = createSignal(false);
-
-  // Revoke dialog
-  const [revokeDialog, setRevokeDialog] = createSignal<{
-    isOpen: boolean;
-    key: ApiKey | null;
-  }>({ isOpen: false, key: null });
-  const [revoking, setRevoking] = createSignal(false);
+  const { revokeDialog, setRevokeDialog, revoking, setRevoking } =
+    createApiKeyRevokeState();
 
   onMount(async () => {
     await loadKeys();
