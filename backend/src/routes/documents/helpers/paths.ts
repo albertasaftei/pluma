@@ -27,8 +27,8 @@ export function sanitizeFilename(name: string): string {
     .replace(/[\/\\]/g, "-") // forward + back slashes → dash
     .replace(/[<>:"|?*]/g, "-") // Windows-reserved chars  → dash
     .replace(/[\x00-\x1f\x7f]/g, "") // control characters      → strip
-    .replace(/\.+$/, "") // trailing dots           → strip
-    .trim();
+    .trim() // surrounding whitespace  → strip
+    .replace(/[.\s]+$/, ""); // trailing dots / spaces  → strip
 }
 
 // Generate unique file path by appending (1), (2), etc. if file already exists

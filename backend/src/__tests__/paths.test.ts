@@ -4,6 +4,7 @@ import path from "path";
 import {
   getUniqueFilePath,
   getOrgDocumentsPath,
+  sanitizeFilename,
 } from "../routes/documents/helpers/paths.js";
 
 const created: string[] = [];
@@ -40,5 +41,27 @@ describe("getUniqueFilePath", () => {
     const result = await getUniqueFilePath("notes.md", orgId, true);
 
     expect(path.basename(result)).toBe("notes (1).md");
+  });
+});
+
+describe("sanitizeFilename", () => {
+  it("strips a trailing dot even when whitespace follows it", () => {
+    // Regression: a trailing space kept the dot out of the /\.+$/ match,
+    // and the later trim() re-exposed it, leaving "Report." on disk —
+    // a name Windows rejects.
+    expect(sanitizeFilename("Report. ")).toBe("Report");
+    expect(sanitizeFilename("Q1 2026. ")).toBe("Q1 2026");
+    expect(sanitizeFilename("notes.. ")).toBe("notes");
+  });
+
+  it("still strips plain trailing dots and surrounding whitespace", () => {
+    expect(sanitizeFilename("Report.")).toBe("Report");
+    expect(sanitizeFilename("Report .")).toBe("Report");
+    expect(sanitizeFilename("  hi  ")).toBe("hi");
+  });
+
+  it("preserves internal dots and leading dots", () => {
+    expect(sanitizeFilename("a.b.")).toBe("a.b");
+    expect(sanitizeFilename(".hidden")).toBe(".hidden");
   });
 });
