@@ -12,6 +12,8 @@ import { textColorSchema } from "~/utils/milkdown/textColor/textColorSchema";
 import { remarkTextColor } from "~/utils/milkdown/textColor/remarkTextColor";
 import { fontFamilySchema } from "~/utils/milkdown/fontFamily/fontFamilySchema";
 import { remarkFontFamily } from "~/utils/milkdown/fontFamily/remarkFontFamily";
+import { fontSizeSchema } from "~/utils/milkdown/fontSize/fontSizeSchema";
+import { remarkFontSize } from "~/utils/milkdown/fontSize/remarkFontSize";
 import { taskListInputPlugin } from "~/utils/milkdown/taskListInputPlugin";
 import { codeBlockViewPlugin } from "~/utils/milkdown/codeBlockView";
 import {
@@ -27,6 +29,7 @@ import MermaidViewer from "./MermaidViewer";
 const milkdownMarkColorPlugin = $remark("markColor", () => remarkMarkColor);
 const milkdownTextColorPlugin = $remark("textColor", () => remarkTextColor);
 const milkdownFontFamilyPlugin = $remark("fontFamily", () => remarkFontFamily);
+const milkdownFontSizePlugin = $remark("fontSize", () => remarkFontSize);
 
 // Normalize href: add https:// if no protocol is provided
 const normalizeUrl = (url: string): string => {
@@ -62,6 +65,7 @@ export default function MarkdownEditor(props: EditorProps) {
     link: false,
     textColor: null as string | null,
     fontFamily: null as string | null,
+    fontSize: null as string | null,
     headingLevel: null as number | null,
     bulletList: false,
     orderedList: false,
@@ -148,6 +152,24 @@ export default function MarkdownEditor(props: EditorProps) {
         });
       }
 
+      // Detect active font size
+      let fontSize: string | null = null;
+      if (empty) {
+        const fsMark = (state.storedMarks || $from.marks()).find(
+          (m: any) => m.type.name === "fontSize",
+        );
+        fontSize = fsMark?.attrs.size ?? null;
+      } else {
+        state.doc.nodesBetween(from, to, (node: any) => {
+          if (!fontSize && node.marks) {
+            const fsMark = node.marks.find(
+              (m: any) => m.type.name === "fontSize",
+            );
+            if (fsMark) fontSize = fsMark.attrs.size ?? null;
+          }
+        });
+      }
+
       const linkActive = hasMark("link");
       setActiveState({
         bold: hasMark("strong"),
@@ -158,6 +180,7 @@ export default function MarkdownEditor(props: EditorProps) {
         link: linkActive,
         textColor,
         fontFamily,
+        fontSize,
         headingLevel,
         bulletList,
         orderedList,
@@ -472,6 +495,33 @@ export default function MarkdownEditor(props: EditorProps) {
                   s.tr
                     .removeMark(from, to, ffMarkType)
                     .addMark(from, to, ffMarkType.create({ family: payload })),
+                );
+              }
+            }
+            break;
+          }
+          case "setFontSize": {
+            const fsMarkType = fontSizeSchema.type(ctx);
+            const { state: s, dispatch: d } = view;
+            const { from, to } = s.selection;
+            if (from === to) {
+              if (!payload) {
+                d(s.tr.removeStoredMark(fsMarkType));
+              } else {
+                d(
+                  s.tr
+                    .removeStoredMark(fsMarkType)
+                    .addStoredMark(fsMarkType.create({ size: payload })),
+                );
+              }
+            } else {
+              if (!payload) {
+                d(s.tr.removeMark(from, to, fsMarkType));
+              } else {
+                d(
+                  s.tr
+                    .removeMark(from, to, fsMarkType)
+                    .addMark(from, to, fsMarkType.create({ size: payload })),
                 );
               }
             }
@@ -887,9 +937,11 @@ export default function MarkdownEditor(props: EditorProps) {
         .use(milkdownMarkColorPlugin)
         .use(milkdownTextColorPlugin)
         .use(milkdownFontFamilyPlugin)
+        .use(milkdownFontSizePlugin)
         .use(markSchema)
         .use(textColorSchema)
         .use(fontFamilySchema)
+        .use(fontSizeSchema)
         .use(markInputRule)
         .use(exitMarkKeymap)
         .use(taskListInputPlugin)

@@ -13,6 +13,7 @@ interface ActiveState {
   link?: boolean;
   textColor?: string | null;
   fontFamily?: string | null;
+  fontSize?: string | null;
   headingLevel?: number | null;
   bulletList?: boolean;
   orderedList?: boolean;
@@ -44,6 +45,20 @@ const FONT_FAMILIES = [
   { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
   { label: "Trebuchet MS", value: "'Trebuchet MS', sans-serif" },
   { label: "Courier New", value: "'Courier New', Courier, monospace" },
+];
+
+const FONT_SIZES = [
+  { label: "10", value: "10px" },
+  { label: "12", value: "12px" },
+  { label: "14", value: "14px" },
+  { label: "16", value: "16px" },
+  { label: "18", value: "18px" },
+  { label: "20", value: "20px" },
+  { label: "24", value: "24px" },
+  { label: "28", value: "28px" },
+  { label: "32", value: "32px" },
+  { label: "36", value: "36px" },
+  { label: "48", value: "48px" },
 ];
 
 interface ToolbarProps {
@@ -111,6 +126,7 @@ export default function EditorToolbar(props: ToolbarProps) {
   const s = () => props.activeState || {};
   const [showColorPicker, setShowColorPicker] = createSignal(false);
   const [showFontPicker, setShowFontPicker] = createSignal(false);
+  const [showFontSizePicker, setShowFontSizePicker] = createSignal(false);
   const [showTablePicker, setShowTablePicker] = createSignal(false);
   const [showDocMenu, setShowDocMenu] = createSignal(false);
   const [hoveredTable, setHoveredTable] = createSignal({ rows: 0, cols: 0 });
@@ -120,6 +136,13 @@ export default function EditorToolbar(props: ToolbarProps) {
     const ff = s().fontFamily;
     if (!ff) return null;
     return FONT_FAMILIES.find((f) => f.value === ff)?.label ?? "Custom";
+  };
+
+  // Derive a short display label for the active font size
+  const activeFontSizeLabel = () => {
+    const fs = s().fontSize;
+    if (!fs) return null;
+    return FONT_SIZES.find((f) => f.value === fs)?.label ?? fs;
   };
 
   return (
@@ -206,6 +229,82 @@ export default function EditorToolbar(props: ToolbarProps) {
                     e.preventDefault();
                     props.onCommand("setFontFamily", null);
                     setShowFontPicker(false);
+                  }}
+                  class="w-full text-[11px] text-secondary-body hover:text-body hover:bg-elevated rounded px-2 py-1 text-left transition-colors cursor-pointer"
+                >
+                  Reset to default
+                </button>
+              </div>
+            </Show>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover>
+
+      {/* Font Size */}
+      <Popover
+        open={showFontSizePicker()}
+        onOpenChange={(isOpen) => {
+          if (!props.hasSelection && !s().fontSize) return;
+          setShowFontSizePicker(isOpen);
+        }}
+      >
+        <Popover.Trigger
+          as={(triggerProps: any) => (
+            <button
+              {...triggerProps}
+              type="button"
+              disabled={!props.hasSelection && !s().fontSize}
+              onMouseDown={(e: MouseEvent) => {
+                e.preventDefault();
+                triggerProps.onClick?.(e);
+              }}
+              title="Font Size"
+              class={`toolbar-button px-1.5 py-1 rounded transition-colors duration-150 cursor-pointer flex items-center gap-1 max-w-[64px] ${
+                !props.hasSelection && !s().fontSize
+                  ? "text-muted-body cursor-not-allowed opacity-50"
+                  : s().fontSize
+                    ? "bg-elevated text-[var(--color-primary)]"
+                    : "text-secondary-body hover:text-body hover:bg-elevated"
+              }`}
+            >
+              <span class="text-[11px] font-medium leading-none truncate">
+                {activeFontSizeLabel() ?? "Size"}
+              </span>
+              <div class="i-carbon-chevron-down w-2.5 h-2.5 shrink-0 opacity-60" />
+            </button>
+          )}
+        />
+        <Popover.Portal>
+          <Popover.Content class="mt-1 bg-surface border border-base rounded-lg shadow-lg p-1.5 z-50 animate-slide-down min-w-[100px]">
+            <p class="text-[10px] text-muted-body uppercase tracking-wide mb-1 px-1.5">
+              Font Size
+            </p>
+            {FONT_SIZES.map((f) => (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  props.onCommand("setFontSize", f.value);
+                  setShowFontSizePicker(false);
+                }}
+                class={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors cursor-pointer hover:bg-elevated ${
+                  s().fontSize === f.value
+                    ? "text-[var(--color-primary)] bg-elevated"
+                    : "text-body"
+                }`}
+                style={{ "font-size": f.value }}
+              >
+                {f.label}
+              </button>
+            ))}
+            <Show when={!!s().fontSize}>
+              <div class="border-t border-base mt-1 pt-1">
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    props.onCommand("setFontSize", null);
+                    setShowFontSizePicker(false);
                   }}
                   class="w-full text-[11px] text-secondary-body hover:text-body hover:bg-elevated rounded px-2 py-1 text-left transition-colors cursor-pointer"
                 >
