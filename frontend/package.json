@@ -48,7 +48,7 @@
     "pdfjs-dist": "^5.5.207",
     "perfect-freehand": "^1.2.3",
     "prismjs": "^1.30.0",
-    "solid-js": "^1.9.11",
+    "solid-js": "^1.9.14",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
     "unocss": "^66.6.6",
