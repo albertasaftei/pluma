@@ -28,6 +28,7 @@ export default function DocumentPage() {
   const appLayout = useAppLayout();
   const [currentContent, setCurrentContent] = createSignal("");
   const [loading, setLoading] = createSignal(false);
+  const [offlineDocumentError, setOfflineDocumentError] = createSignal(false);
   const [useLivePreview, setUseLivePreview] = createSignal(true);
   const [saveStatus, setSaveStatus] = createSignal<
     "saved" | "saving" | "unsaved"
@@ -87,15 +88,31 @@ export default function DocumentPage() {
       return;
     }
 
+    // Clear stale content immediately so the previous document's text is never
+    // shown under a different path.
+    setCurrentContent("");
+    setOfflineDocumentError(false);
     setLoading(true);
     try {
       const result = await api.getDocument(path);
       setCurrentContent(result.content);
       setSaveStatus("saved");
-    } catch (error) {
-      console.error("Failed to load document:", error);
-      // If document not found, redirect to homepage
-      navigate(routes.homepage);
+    } catch (error: unknown) {
+      const isNetworkError =
+        !navigator.onLine ||
+        (error instanceof TypeError &&
+          (error.message.includes("Failed to fetch") ||
+            error.message.includes("NetworkError") ||
+            error.message.includes("Load failed")));
+
+      if (isNetworkError) {
+        // Document isn't in the SW cache — show an offline placeholder instead
+        // of redirecting away or showing stale content from another document.
+        setOfflineDocumentError(true);
+      } else {
+        console.error("Failed to load document:", error);
+        navigate(routes.homepage);
+      }
     } finally {
       setLoading(false);
     }
@@ -232,6 +249,14 @@ export default function DocumentPage() {
           </div>
         }
       >
+        <Show when={offlineDocumentError()}>
+          <div class="flex-1 flex flex-col items-center justify-center gap-3 text-muted-body">
+            <div class="i-carbon-wifi-off w-10 h-10" />
+            <p class="text-sm font-medium">This document isn't available offline</p>
+            <p class="text-xs">Connect to the internet to open it</p>
+          </div>
+        </Show>
+        <Show when={!offlineDocumentError()}>
         {useLivePreview() ? (
           <Suspense
             fallback={
@@ -304,6 +329,7 @@ export default function DocumentPage() {
         ) : (
           <Editor content={currentContent()} onChange={handleContentChange} />
         )}
+        </Show>
       </Show>
     </>
   );

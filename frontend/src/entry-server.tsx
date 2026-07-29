@@ -8,6 +8,7 @@ export default createHandler(() => (
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="theme-color" content="#ffffff" />
           <link rel="icon" href="/favicon-primary.svg" />
           <link
             rel="icon"
@@ -19,6 +20,8 @@ export default createHandler(() => (
             href="/favicon-light.svg"
             media="(prefers-color-scheme: dark)"
           />
+          <link rel="manifest" href="/site.webmanifest" />
+          <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png" />
           {assets}
         </head>
         <body>

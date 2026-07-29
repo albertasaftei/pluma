@@ -16,6 +16,7 @@ import { syncThemeFromServer } from "~/lib/theme";
 import { isMobileOrTablet } from "~/utils/device.utils";
 import { routes } from "~/routes";
 import { createDocumentStore } from "~/lib/documentStore";
+import { prefetchDocuments } from "~/lib/prefetchDocuments";
 
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -87,17 +88,35 @@ export const AppLayout: ParentComponent<AppLayoutProps> = (props) => {
 
     // In demo mode, skip session validation
     if (!isDemoMode) {
-      const session = await api.validateSession();
-      if (!session.valid) {
-        // Session is invalid or expired, redirect to login
-        navigate(routes.login);
-        return;
+      try {
+        const session = await api.validateSession();
+        if (!session.valid) {
+          // Session is invalid or expired, redirect to login
+          navigate(routes.login);
+          return;
+        }
+        syncThemeFromServer(session.theme);
+      } catch {
+        // Network error (e.g. offline) — if there's no token at all, redirect
+        // to login; otherwise stay and let the document cache serve content.
+        if (!localStorage.getItem("plumio_token")) {
+          navigate(routes.login);
+          return;
+        }
       }
-      syncThemeFromServer(session.theme);
     }
 
     // Load documents once on mount
-    await store.load();
+    try {
+      await store.load();
+    } catch {
+      // Offline on first load — document tree will be empty but cached
+      // documents can still be opened individually.
+    }
+
+    // Prefetch all document contents in the background so they're available
+    // offline. Runs in idle batches after the UI is ready.
+    prefetchDocuments(store.documents());
   });
 
   const toggleExpandFolder = (path: string) => {

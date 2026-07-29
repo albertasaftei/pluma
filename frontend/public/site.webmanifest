@@ -1,6 +1,10 @@
 {
   "name": "plumio",
   "short_name": "plumio",
+  "description": "A self-hosted markdown editor",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
