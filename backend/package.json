@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",
-    "@hono/node-server": "^1.19.13",
+    "@hono/node-server": "^2.0.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.8.1",
     "dotenv": "^16.4.7",
