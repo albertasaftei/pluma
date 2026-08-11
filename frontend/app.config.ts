@@ -25,6 +25,8 @@ export default defineConfig({
         ],
         workbox: {
           globPatterns: ["**/*.{js,css,html,svg,png,ico,woff,woff2}"],
+          globIgnores: ["**/wardley-*.js"],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           clientsClaim: true,
           navigateFallback: null,
           runtimeCaching: [
